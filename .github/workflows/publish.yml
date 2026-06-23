@@ -1,0 +1,26 @@
+# CI/CD pipeline for PowerShell Gallery
+name: Publish Module
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Pester Tests
+        shell: pwsh
+        run: |
+          Install-Module -Name Pester -Force -SkipPublisherCheck
+          Invoke-Pester -Path ./tests -CI
+
+      - name: Publish to PowerShell Gallery
+        shell: pwsh
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          Publish-Module -Path ./src/gcpstools -NuGetApiKey $env:NUGET_API_KEY -Verbose
