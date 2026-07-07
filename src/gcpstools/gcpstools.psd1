@@ -12,7 +12,7 @@
 RootModule = 'gcpstools.psm1'
 
 # Version number of this module.
-ModuleVersion = '0.1.5'
+ModuleVersion = '0.1.6'
 
 # Supported PSEditions
 CompatiblePSEditions = @('Desktop', 'Core')
@@ -119,7 +119,7 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        ReleaseNotes = 'Updated Set-RegexHistorySearch documentation for module usage.'
+        ReleaseNotes = 'Fixed Search-SvnLog Spectre markup error when paths contain copy-from metadata.'
 
         # Prerelease string of this module
         # Prerelease = ''

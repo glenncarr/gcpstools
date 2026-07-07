@@ -321,7 +321,7 @@ foreach ($result in $results) {
                 $action    = $p.action
                 $cfPath    = $p.GetAttribute('copyfrom-path')
                 $cfRev     = $p.GetAttribute('copyfrom-rev')
-                $copyFrom  = if ($cfPath) { "  [copied from $(Get-SpectreEscapedText $cfPath)@$cfRev]" } else { '' }
+                $copyFrom  = if ($cfPath) { "  [[copied from $(Get-SpectreEscapedText $cfPath)@$cfRev]]" } else { '' }
                 $nk        = $p.GetAttribute('node-kind')
                 $nodeKind  = if ($nk) { " ($nk)" } else { '' }
                 $pathText  = Get-SpectreEscapedText $p.'#text'

@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-07-07
+
+### Fixed
+- `Search-SvnLog`: Spectre markup error when a changed path included copy-from
+  metadata — the `[copied from ...]` text was being parsed as a Spectre color tag.
+  Escaped to `[[copied from ...]]` so it renders as literal brackets.
+
 ## [0.1.5] - 2026-07-07
 
 ### Changed
