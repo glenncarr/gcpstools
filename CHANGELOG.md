@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-07-07
+
+### Added
+- `Search-AppEventLog` — searches the Application event log for entries matching a string.
+- `Test-Xml` — validates an XML file against an XSD schema.
+
 ## [0.1.3] - 2026-07-07
 
 ### Added

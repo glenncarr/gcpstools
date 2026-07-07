@@ -12,7 +12,7 @@
 RootModule = 'gcpstools.psm1'
 
 # Version number of this module.
-ModuleVersion = '0.1.3'
+ModuleVersion = '0.1.4'
 
 # Supported PSEditions
 CompatiblePSEditions = @('Desktop', 'Core')
@@ -77,8 +77,10 @@ FunctionsToExport = @(
     'Out-Diff'
     'Remove-ObjectDirectory'
     'Remove-SvnUnversioned'
+    'Search-AppEventLog'
     'Search-SvnLog'
     'Set-RegexHistorySearch'
+    'Test-Xml'
 )
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
@@ -117,7 +119,7 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        ReleaseNotes = 'Added Compare-DirectoryContentParallel and Format-DirectoryDiff functions.'
+        ReleaseNotes = 'Added Search-AppEventLog and Test-Xml functions.'
 
         # Prerelease string of this module
         # Prerelease = ''
