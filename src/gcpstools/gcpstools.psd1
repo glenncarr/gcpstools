@@ -12,10 +12,10 @@
 RootModule = 'gcpstools.psm1'
 
 # Version number of this module.
-ModuleVersion = '0.1.1'
+ModuleVersion = '0.1.2'
 
 # Supported PSEditions
-# CompatiblePSEditions = @()
+CompatiblePSEditions = @('Desktop', 'Core')
 
 # ID used to uniquely identify this module
 GUID = '3de75bae-81dc-4972-8b82-d09ff3ad021b'
@@ -33,7 +33,7 @@ Copyright = '(c) Glenn Carr. All rights reserved.'
 Description = 'Glenn''s custom PowerShell tools'
 
 # Minimum version of the PowerShell engine required by this module
-PowerShellVersion = '7.0'
+PowerShellVersion = '5.1'
 
 # Name of the PowerShell host required by this module
 # PowerShellHostName = ''
@@ -103,7 +103,7 @@ PrivateData = @{
     PSData = @{
 
         # Tags applied to this module. These help with module discovery in online galleries.
-        Tags = @('SVN', 'Subversion', 'PSReadLine', 'History', 'DotNet', 'Utilities', 'PSEdition_Core', 'Windows')
+        Tags = @('SVN', 'Subversion', 'PSReadLine', 'History', 'DotNet', 'Utilities', 'PSEdition_Core', 'PSEdition_Desktop', 'Windows')
 
         # A URL to the license for this module.
         LicenseUri = 'https://github.com/glenncarr/gcpstools/blob/main/LICENSE'
@@ -115,7 +115,7 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        ReleaseNotes = 'Wrapped public scripts in functions, auto-register the regex history search key handler on load, and require PowerShell 7.0.'
+        ReleaseNotes = 'Added Windows PowerShell 5.1 (Desktop edition) compatibility.'
 
         # Prerelease string of this module
         # Prerelease = ''

@@ -1,5 +1,4 @@
-﻿#Requires -Version 7.0
-#Requires -Modules PSReadLine
+﻿#Requires -Modules PSReadLine
 
 function Set-RegexHistorySearch {
 <#

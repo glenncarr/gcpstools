@@ -1,6 +1,4 @@
-﻿#Requires -Version 7.0
-
-function Search-SvnLog {
+﻿function Search-SvnLog {
 <#
 .SYNOPSIS
     Searches SVN log history for one or more patterns in commit messages.
@@ -131,13 +129,16 @@ if ($hasSpectre) {
 }
 
 # --- Build regex list for each pattern -----------------------------------------
-$regexOptions = $CaseSensitive ? [System.Text.RegularExpressions.RegexOptions]::None
-                               : [System.Text.RegularExpressions.RegexOptions]::IgnoreCase
+$regexOptions = if ($CaseSensitive) {
+    [System.Text.RegularExpressions.RegexOptions]::None
+} else {
+    [System.Text.RegularExpressions.RegexOptions]::IgnoreCase
+}
 
 $regexList = [System.Collections.Generic.List[System.Text.RegularExpressions.Regex]]::new()
 if ($Pattern) {
     foreach ($pat in $Pattern) {
-        $escaped = $SimpleMatch ? [System.Text.RegularExpressions.Regex]::Escape($pat) : $pat
+        $escaped = if ($SimpleMatch) { [System.Text.RegularExpressions.Regex]::Escape($pat) } else { $pat }
         try {
             $regexList.Add([System.Text.RegularExpressions.Regex]::new($escaped, $regexOptions))
         } catch [System.ArgumentException] {
@@ -194,7 +195,7 @@ if (-not $entries) {
 # --- Build file filter regex if specified --------------------------------------
 $fileRegex = $null
 if ($IncludeFile) {
-    $escapedFile = $SimpleMatch ? [System.Text.RegularExpressions.Regex]::Escape($IncludeFile) : $IncludeFile
+    $escapedFile = if ($SimpleMatch) { [System.Text.RegularExpressions.Regex]::Escape($IncludeFile) } else { $IncludeFile }
     try {
         $fileRegex = [System.Text.RegularExpressions.Regex]::new($escapedFile, $regexOptions)
     } catch [System.ArgumentException] {
@@ -211,7 +212,7 @@ foreach ($entry in $entries) {
 
     # Apply file filter if specified
     if ($fileRegex) {
-        $paths = $entry.paths?.path
+        $paths = if ($entry.paths) { $entry.paths.path } else { $null }
         if (-not $paths) { continue }
         $fileMatch = $false
         foreach ($p in $paths) {
@@ -276,7 +277,7 @@ foreach ($result in $results) {
     Write-Host "r" -NoNewline -ForegroundColor Yellow
     Write-Host $entry.revision -NoNewline -ForegroundColor $color.Fg -BackgroundColor $color.Bg
     Write-Host " | " -NoNewline -ForegroundColor DarkGray
-    Write-Host ($entry.author ?? '(none)') -NoNewline
+    Write-Host $(if ($entry.author) { $entry.author } else { '(none)' }) -NoNewline
     if ($Pattern -and $Pattern.Count -gt 1) {
         Write-Host " | " -NoNewline -ForegroundColor DarkGray
         Write-Host "[$($result.PatternIndex + 1)] $($Pattern[$result.PatternIndex])" -NoNewline -ForegroundColor $color.Fg -BackgroundColor $color.Bg
@@ -313,7 +314,7 @@ foreach ($result in $results) {
 
     # Changed paths
     if ($ShowPaths) {
-    $paths = $entry.paths?.path
+    $paths = if ($entry.paths) { $entry.paths.path } else { $null }
     if ($paths) {
         if ($hasSpectre) {
             $pathLines = foreach ($p in $paths) {
@@ -377,7 +378,7 @@ foreach ($result in $results) {
     }
 
     # Commit message — colored by matching pattern only if -Pattern was specified
-    $msg = ($entry.msg ?? '') -replace '\r', ''
+    $msg = $(if ($entry.msg) { $entry.msg } else { '' }) -replace '\r', ''
     if ($hasSpectre) {
         $spectreColor = $color.Spectre
         $escapedMsg = $msg | Get-SpectreEscapedText
