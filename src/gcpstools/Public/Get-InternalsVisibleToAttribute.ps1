@@ -23,7 +23,7 @@ function Get-InternalsVisibleToAttribute {
 #>
 [CmdletBinding()]
 param( [Parameter(Mandatory = $true)][string]$Path, [Parameter(Mandatory = $true)][string]$FriendAssemblyNamePattern )
- 
+
 try {
     $assembly = [System.Reflection.Assembly]::LoadFrom((Resolve-Path $Path))
     $attributes = $assembly.GetCustomAttributes([System.Runtime.CompilerServices.InternalsVisibleToAttribute], $false)

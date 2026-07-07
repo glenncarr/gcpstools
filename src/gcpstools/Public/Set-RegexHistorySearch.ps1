@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+﻿#Requires -Version 7.0
 #Requires -Modules PSReadLine
 
 function Set-RegexHistorySearch {
@@ -36,6 +36,8 @@ function Set-RegexHistorySearch {
 #>
 
 [CmdletBinding()]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Registers a PSReadLine key handler; there is no destructive state change to gate behind ShouldProcess.')]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'The key handler scriptblock signature (key, arg) is mandated by PSReadLine.')]
 param(
     [string] $Key = 'Ctrl+Alt+r'
 )

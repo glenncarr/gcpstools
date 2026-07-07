@@ -10,8 +10,8 @@ function Remove-SvnUnversioned {
     #>
     [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
     param (
-        [Parameter(Mandatory = $false, 
-                   ValueFromPipeline = $true, 
+        [Parameter(Mandatory = $false,
+                   ValueFromPipeline = $true,
                    ValueFromPipelineByPropertyName = $true,
                    Position = 0)]
         [Alias("FullName")]
@@ -26,17 +26,17 @@ function Remove-SvnUnversioned {
             if (Test-Path -Path $item) {
                 $targetPath = Convert-Path -Path $item
                 Push-Location -Path $targetPath
-                
+
                 try {
                     Write-Verbose "Scanning: $targetPath"
-                    
+
                     # Get unversioned items
                     $unversionedItems = svn st | Where-Object { $_.StartsWith("?") }
 
                     foreach ($line in $unversionedItems) {
                         # Clean the filename
                         $fileName = $line.TrimStart("?").Trim()
-                        
+
                         # --- EXCLUSION LOGIC ---
                         $shouldSkip = $false
                         if ($Exclude) {

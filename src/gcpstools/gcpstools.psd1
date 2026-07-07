@@ -103,19 +103,19 @@ PrivateData = @{
     PSData = @{
 
         # Tags applied to this module. These help with module discovery in online galleries.
-        # Tags = @()
+        Tags = @('SVN', 'Subversion', 'PSReadLine', 'History', 'DotNet', 'Utilities', 'PSEdition_Core', 'Windows')
 
         # A URL to the license for this module.
-        # LicenseUri = ''
+        LicenseUri = 'https://github.com/glenncarr/gcpstools/blob/main/LICENSE'
 
         # A URL to the main website for this project.
-        # ProjectUri = ''
+        ProjectUri = 'https://github.com/glenncarr/gcpstools'
 
         # A URL to an icon representing this module.
         # IconUri = ''
 
         # ReleaseNotes of this module
-        # ReleaseNotes = ''
+        ReleaseNotes = 'Wrapped public scripts in functions, auto-register the regex history search key handler on load, and require PowerShell 7.0.'
 
         # Prerelease string of this module
         # Prerelease = ''

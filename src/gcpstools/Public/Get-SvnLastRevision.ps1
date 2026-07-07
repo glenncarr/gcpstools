@@ -15,6 +15,7 @@ function Get-SvnLastRevision {
     .\Get-SvnLastRevision.ps1
 #>
 [CmdletBinding()]
+[OutputType([int])]
 param(
     [Parameter(Position = 0)]
     [string]$Path = "."
