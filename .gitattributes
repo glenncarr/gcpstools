@@ -1,0 +1,6 @@
+# Normalize line endings; enforce CRLF for PowerShell source
+* text=auto
+*.ps1  text eol=crlf
+*.psd1 text eol=crlf
+*.psm1 text eol=crlf
+*.md   text eol=lf
