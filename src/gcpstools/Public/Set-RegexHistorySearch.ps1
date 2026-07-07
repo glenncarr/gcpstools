@@ -6,32 +6,39 @@ function Set-RegexHistorySearch {
     Registers a PSReadLine key handler that searches command history with a regex.
 
 .DESCRIPTION
-    Dot-source this file from your $PROFILE.  Press the bound key to open an
-    inline prompt, type a .NET regex, then pick from matching history entries
-    with arrow keys.  Matches are returned newest-first and deduplicated.
+    Binds a keyboard chord that opens an inline regex prompt at the command line.
+    Type a .NET regular expression, press Enter, and pick from matching history
+    entries using arrow keys.  Matches are returned newest-first and deduplicated
+    across all sessions (reads PSReadLine's persistent history file).
+
+    This function is called automatically when the gcpstools module is imported,
+    binding the default chord Ctrl+Alt+r.  To use a different key, call the
+    function explicitly after import:
+
+        Import-Module gcpstools
+        Set-RegexHistorySearch -Key 'F9'
 
     Key behaviour:
-      Enter                – confirm pattern / select entry
-      Escape               – cancel at any point and restore the original buffer
-      ↑ / ↓                – move the selection one entry
-      PageUp / PageDown    – move the selection one page
-      Home / End           – jump to the first / last entry
+      Enter                - confirm pattern / select entry
+      Escape               - cancel at any point and restore the original buffer
+      Up / Down            - move the selection one entry
+      PageUp / PageDown    - move the selection one page
+      Home / End           - jump to the first / last entry
 
-    History is read from PSReadLine's persistent save file, so matches include
-    commands from previous sessions.  Multi-line commands are reconstructed and
-    shown on a single line (newlines rendered as '↵') but inserted in full.
+    Multi-line commands are shown on a single line (newlines rendered as '<-')
+    but inserted in full.
 
 .PARAMETER Key
-    PSReadLine chord to bind.  Defaults to 'Ctrl+Alt+r'.
+    PSReadLine chord to bind. Defaults to 'Ctrl+Alt+r'.
     Any chord accepted by Set-PSReadLineKeyHandler is valid, e.g. 'F9'.
 
 .EXAMPLE
-    # Add to $PROFILE:
-    . "$HOME\scripts\Set-RegexHistorySearch.ps1"
+    # Automatically registered on module import with the default key:
+    Import-Module gcpstools
 
 .EXAMPLE
-    # Custom binding:
-    . "$HOME\scripts\Set-RegexHistorySearch.ps1" -Key 'F9'
+    # Re-register with a custom binding after import:
+    Set-RegexHistorySearch -Key 'F9'
 #>
 
 [CmdletBinding()]

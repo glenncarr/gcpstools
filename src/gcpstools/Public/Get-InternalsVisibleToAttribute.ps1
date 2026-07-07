@@ -16,7 +16,7 @@ function Get-InternalsVisibleToAttribute {
     (matched with the -like operator).
 
 .EXAMPLE
-    .\Get-InternalsVisibleToAttribute.ps1 -Path .\MyLibrary.dll -FriendAssemblyNamePattern '*Tests*'
+    Get-InternalsVisibleToAttribute.ps1 -Path .\MyLibrary.dll -FriendAssemblyNamePattern '*Tests*'
 
     Returns the InternalsVisibleTo attributes of MyLibrary.dll whose friend assembly
     name contains "Tests".

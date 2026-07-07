@@ -12,7 +12,7 @@
 RootModule = 'gcpstools.psm1'
 
 # Version number of this module.
-ModuleVersion = '0.1.4'
+ModuleVersion = '0.1.5'
 
 # Supported PSEditions
 CompatiblePSEditions = @('Desktop', 'Core')
@@ -119,7 +119,7 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        ReleaseNotes = 'Added Search-AppEventLog and Test-Xml functions.'
+        ReleaseNotes = 'Updated Set-RegexHistorySearch documentation for module usage.'
 
         # Prerelease string of this module
         # Prerelease = ''

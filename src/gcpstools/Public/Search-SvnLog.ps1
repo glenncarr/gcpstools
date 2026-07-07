@@ -42,19 +42,19 @@
     Display only the last N matching revisions (newest).
 
 .EXAMPLE
-    .\Search-SvnLog.ps1 -Pattern "fix null reference"
+    Search-SvnLog.ps1 -Pattern "fix null reference"
 
 .EXAMPLE
-    .\Search-SvnLog.ps1 -Pattern "bug fix" -IncludeFile "SettingsService\.cs"
+    Search-SvnLog.ps1 -Pattern "bug fix" -IncludeFile "SettingsService\.cs"
 
 .EXAMPLE
-    .\Search-SvnLog.ps1 "deploy(ment|ed)" -Path C:\MyRepo -Limit 1000
+    Search-SvnLog.ps1 "deploy(ment|ed)" -Path C:\MyRepo -Limit 1000
 
 .EXAMPLE
-    .\Search-SvnLog.ps1 "^JIRA-\d+" -CaseSensitive
+    Search-SvnLog.ps1 "^JIRA-\d+" -CaseSensitive
 
 .EXAMPLE
-    .\Search-SvnLog.ps1 -Pattern "bug 1234","bug 5678" -SimpleMatch
+    Search-SvnLog.ps1 -Pattern "bug 1234","bug 5678" -SimpleMatch
 #>
 [CmdletBinding()]
 param(

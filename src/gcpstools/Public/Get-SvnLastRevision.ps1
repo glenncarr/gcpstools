@@ -7,10 +7,10 @@ function Get-SvnLastRevision {
     The file or directory path to query. Defaults to the current directory.
 
 .EXAMPLE
-    .\Get-SvnLastRevision.ps1 -Path .\src\MyFile.cs
+    Get-SvnLastRevision.ps1 -Path .\src\MyFile.cs
 
 .EXAMPLE
-    .\Get-SvnLastRevision.ps1
+    Get-SvnLastRevision.ps1
 #>
 [CmdletBinding()]
 [OutputType([int])]
