@@ -3,7 +3,8 @@
 [CmdletBinding()]
 param (
     [switch]$Test,
-    [switch]$Import
+    [switch]$Import,
+    [switch]$Publish
 )
 
 $modulePath = "$PSScriptRoot\src\gcpstools"
@@ -19,4 +20,15 @@ if ($Test) {
 if ($Import) {
     Write-Host "Importing module..." -ForegroundColor Cyan
     Import-Module $modulePath -Force -Verbose
+}
+
+if ($Publish) {
+    Write-Host "Copying README into module folder for the Gallery..." -ForegroundColor Cyan
+    Copy-Item "$PSScriptRoot\README.md" "$modulePath\README.md" -Force
+
+    if (-not $env:PSGALLERY_KEY) {
+        throw "PSGALLERY_KEY environment variable is not set."
+    }
+    Write-Host "Publishing module to the PowerShell Gallery..." -ForegroundColor Cyan
+    Publish-Module -Path $modulePath -NuGetApiKey $env:PSGALLERY_KEY
 }
