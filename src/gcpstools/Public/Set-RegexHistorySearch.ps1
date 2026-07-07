@@ -1,6 +1,7 @@
 #Requires -Version 7.0
 #Requires -Modules PSReadLine
 
+function Set-RegexHistorySearch {
 <#
 .SYNOPSIS
     Registers a PSReadLine key handler that searches command history with a regex.
@@ -233,3 +234,4 @@ Set-PSReadLineKeyHandler `
     -BriefDescription 'RegexHistorySearch' `
     -LongDescription  "Search command history with a .NET regex ($Key)" `
     -ScriptBlock      $handlerBlock
+}

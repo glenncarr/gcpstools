@@ -33,7 +33,7 @@ Copyright = '(c) Glenn Carr. All rights reserved.'
 Description = 'Glenn''s custom PowerShell tools'
 
 # Minimum version of the PowerShell engine required by this module
-PowerShellVersion = '5.1'
+PowerShellVersion = '7.0'
 
 # Name of the PowerShell host required by this module
 # PowerShellHostName = ''
@@ -69,7 +69,15 @@ PowerShellVersion = '5.1'
 # NestedModules = @()
 
 # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
-FunctionsToExport = 'Get-CustomToolA', 'Invoke-CustomToolB'
+FunctionsToExport = @(
+    'Get-InternalsVisibleToAttribute'
+    'Get-SvnLastRevision'
+    'Out-Diff'
+    'Remove-ObjectDirectory'
+    'Remove-SvnUnversioned'
+    'Search-SvnLog'
+    'Set-RegexHistorySearch'
+)
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
 CmdletsToExport = @()

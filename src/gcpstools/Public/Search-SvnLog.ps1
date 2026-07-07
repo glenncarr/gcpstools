@@ -1,4 +1,6 @@
 #Requires -Version 7.0
+
+function Search-SvnLog {
 <#
 .SYNOPSIS
     Searches SVN log history for one or more patterns in commit messages.
@@ -140,7 +142,7 @@ if ($Pattern) {
             $regexList.Add([System.Text.RegularExpressions.Regex]::new($escaped, $regexOptions))
         } catch [System.ArgumentException] {
             Write-Error "Invalid regular expression '$pat': $($_.Exception.Message)"
-            exit 1
+            return
         }
     }
 }
@@ -178,7 +180,7 @@ $rawXml = svn @svnArgs 2>&1
 if ($LASTEXITCODE -ne 0) {
     $errorText = $rawXml | Where-Object { $_ -is [string] } | Out-String
     Write-Error "svn log failed (exit $LASTEXITCODE):`n$errorText"
-    exit $LASTEXITCODE
+    return
 }
 
 [xml]$logXml = $rawXml | Out-String
@@ -186,7 +188,7 @@ if ($LASTEXITCODE -ne 0) {
 $entries = $logXml.log.logentry
 if (-not $entries) {
     Write-Host "No log entries found." -ForegroundColor Yellow
-    exit 0
+    return
 }
 
 # --- Build file filter regex if specified --------------------------------------
@@ -197,7 +199,7 @@ if ($IncludeFile) {
         $fileRegex = [System.Text.RegularExpressions.Regex]::new($escapedFile, $regexOptions)
     } catch [System.ArgumentException] {
         Write-Error "Invalid IncludeFile pattern '$IncludeFile': $($_.Exception.Message)"
-        exit 1
+        return
     }
 }
 
@@ -236,7 +238,7 @@ foreach ($entry in $entries) {
 
 if ($results.Count -eq 0) {
     Write-Host "No commits found matching the specified criteria." -ForegroundColor Yellow
-    exit 0
+    return
 }
 
 Write-Host "Found $($results.Count) matching commit(s)" -ForegroundColor Green
@@ -250,7 +252,7 @@ if (-not $Descending) {
 # --- Apply -First / -Last slicing ----------------------------------------------
 if ($First -and $Last) {
     Write-Error "Cannot specify both -First and -Last."
-    exit 1
+    return
 }
 if ($First) {
     if ($First -lt $results.Count) {
@@ -410,3 +412,4 @@ foreach ($result in $results) {
 
 Write-Host "Total matches: $($results.Count)" -ForegroundColor Green
 Write-Host ''
+}

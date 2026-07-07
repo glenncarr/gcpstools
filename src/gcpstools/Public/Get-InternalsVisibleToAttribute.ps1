@@ -1,3 +1,4 @@
+function Get-InternalsVisibleToAttribute {
 <#
 .SYNOPSIS
     Retrieves InternalsVisibleTo attributes from a .NET assembly.
@@ -32,4 +33,5 @@ try {
 }
 catch {
     Write-Error "Failed to load or inspect the assembly '$Path'. Error: $($_.Exception.Message)"
+}
 }

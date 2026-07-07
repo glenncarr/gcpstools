@@ -14,3 +14,8 @@ foreach ($file in @($Private + $Public)) {
 
 # Export only public functions
 Export-ModuleMember -Function $Public.BaseName
+
+# Register the regex history search key handler on module load
+if (Get-Module -ListAvailable -Name PSReadLine) {
+    Set-RegexHistorySearch
+}
