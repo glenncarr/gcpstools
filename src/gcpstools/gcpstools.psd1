@@ -12,7 +12,7 @@
 RootModule = 'gcpstools.psm1'
 
 # Version number of this module.
-ModuleVersion = '0.1.2'
+ModuleVersion = '0.1.3'
 
 # Supported PSEditions
 CompatiblePSEditions = @('Desktop', 'Core')
@@ -70,6 +70,8 @@ PowerShellVersion = '5.1'
 
 # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
 FunctionsToExport = @(
+    'Compare-DirectoryContentParallel'
+    'Format-DirectoryDiff'
     'Get-InternalsVisibleToAttribute'
     'Get-SvnLastRevision'
     'Out-Diff'
@@ -115,7 +117,7 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        ReleaseNotes = 'Added Windows PowerShell 5.1 (Desktop edition) compatibility.'
+        ReleaseNotes = 'Added Compare-DirectoryContentParallel and Format-DirectoryDiff functions.'
 
         # Prerelease string of this module
         # Prerelease = ''

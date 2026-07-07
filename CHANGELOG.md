@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-07-07
+
+### Added
+- `Compare-DirectoryContentParallel` — multithreaded file comparison between two directories (requires PS 7.0).
+- `Format-DirectoryDiff` — color-formatted output for directory comparison results (requires PS 7.0).
+
 ## [0.1.2] - 2026-07-07
 
 ### Changed
