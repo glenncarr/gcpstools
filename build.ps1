@@ -11,9 +11,11 @@ $modulePath = "$PSScriptRoot\src\gcpstools"
 
 if ($Test) {
     Write-Host "Running Pester tests..." -ForegroundColor Cyan
-    if (-not (Get-Module -ListAvailable -Name Pester)) {
-        Install-Module -Name Pester -Force -SkipPublisherCheck
+    $pester = Get-Module -ListAvailable -Name Pester | Sort-Object Version -Descending | Select-Object -First 1
+    if (-not $pester -or $pester.Version -lt [version]'5.0.0') {
+        Install-Module -Name Pester -MinimumVersion 5.0.0 -Force -SkipPublisherCheck -Scope CurrentUser
     }
+    Import-Module Pester -MinimumVersion 5.0.0 -Force
     Invoke-Pester -Path "$PSScriptRoot\tests" -Output Detailed
 }
 
