@@ -110,22 +110,25 @@ $colorPalette = @(
     @{ Fg = 'Black';  Bg = 'Gray';        Spectre = 'grey'    }
 )
 
-# --- Check for PwshSpectreConsole module ---------------------------------------
-$hasSpectre = $null -ne (Get-Module -ListAvailable -Name PwshSpectreConsole)
-if (-not $hasSpectre) {
-    Write-Host "PwshSpectreConsole module not found. Install it for enhanced output?" -ForegroundColor Yellow
-    Write-Host "  [Y] Yes  [N] No (continue without it)" -ForegroundColor DarkGray -NoNewline
-    $keyInfo = [System.Console]::ReadKey($true)
-    Write-Host ''
-    if ($keyInfo.Key -eq [System.ConsoleKey]::Y) {
-        Write-Host "Installing PwshSpectreConsole..." -ForegroundColor Cyan
-        Install-Module PwshSpectreConsole -Scope CurrentUser -Force -AllowClobber
-        $hasSpectre = $true
+# --- Check for PwshSpectreConsole module (PowerShell 7+ only) -------------------
+$hasSpectre = $false
+if ($PSVersionTable.PSVersion.Major -ge 7) {
+    $hasSpectre = $null -ne (Get-Module -ListAvailable -Name PwshSpectreConsole)
+    if (-not $hasSpectre) {
+        Write-Host "PwshSpectreConsole module not found. Install it for enhanced output?" -ForegroundColor Yellow
+        Write-Host "  [Y] Yes  [N] No (continue without it)" -ForegroundColor DarkGray -NoNewline
+        $keyInfo = [System.Console]::ReadKey($true)
+        Write-Host ''
+        if ($keyInfo.Key -eq [System.ConsoleKey]::Y) {
+            Write-Host "Installing PwshSpectreConsole..." -ForegroundColor Cyan
+            Install-Module PwshSpectreConsole -Scope CurrentUser -Force -AllowClobber
+            $hasSpectre = $true
+        }
     }
-}
-if ($hasSpectre) {
-    Import-Module PwshSpectreConsole -ErrorAction SilentlyContinue
-    $hasSpectre = $null -ne (Get-Command Format-SpectrePanel -ErrorAction SilentlyContinue)
+    if ($hasSpectre) {
+        Import-Module PwshSpectreConsole -ErrorAction SilentlyContinue
+        $hasSpectre = $null -ne (Get-Command Format-SpectrePanel -ErrorAction SilentlyContinue)
+    }
 }
 
 # --- Build regex list for each pattern -----------------------------------------

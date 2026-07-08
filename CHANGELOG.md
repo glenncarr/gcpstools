@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.1.7] - 2026-07-08
+
+### Changed
+- `Search-SvnLog`: only prompt to install PwshSpectreConsole on PowerShell 7+.
+  On Windows PowerShell 5.1 (where the module isn't supported) it now silently
+  uses the plain-text rendering path.
+
 ## [0.1.6] - 2026-07-07
 
 ### Fixed

@@ -12,7 +12,7 @@
 RootModule = 'gcpstools.psm1'
 
 # Version number of this module.
-ModuleVersion = '0.1.6'
+ModuleVersion = '0.1.7'
 
 # Supported PSEditions
 CompatiblePSEditions = @('Desktop', 'Core')
@@ -119,7 +119,7 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        ReleaseNotes = 'Fixed Search-SvnLog Spectre markup error when paths contain copy-from metadata.'
+        ReleaseNotes = 'Search-SvnLog no longer prompts to install PwshSpectreConsole on PowerShell 5.1.'
 
         # Prerelease string of this module
         # Prerelease = ''
