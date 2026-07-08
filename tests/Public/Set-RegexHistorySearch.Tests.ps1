@@ -22,9 +22,9 @@ Describe 'Set-RegexHistorySearch' {
             return
         }
         Set-RegexHistorySearch
-        $handler = Get-PSReadLineKeyHandler -Bound | Where-Object Function -eq 'RegexHistorySearch'
+        $handler = Get-PSReadLineKeyHandler -Bound |
+            Where-Object { $_.Function -eq 'RegexHistorySearch' -and $_.Key -eq 'Ctrl+Alt+r' }
         $handler | Should -Not -BeNullOrEmpty
-        $handler.Key | Should -Be 'Ctrl+Alt+r'
     }
 
     It 'Registers the key handler with a custom chord' {
@@ -35,5 +35,13 @@ Describe 'Set-RegexHistorySearch' {
         Set-RegexHistorySearch -Key 'Ctrl+Alt+t'
         $handler = Get-PSReadLineKeyHandler -Bound | Where-Object Key -eq 'Ctrl+Alt+t'
         $handler | Should -Not -BeNullOrEmpty
+    }
+
+    AfterAll {
+        # Remove the custom binding registered by the tests so it doesn't leak
+        # into the interactive session.
+        if (Get-Module -Name PSReadLine) {
+            Remove-PSReadLineKeyHandler -Key 'Ctrl+Alt+t' -ErrorAction SilentlyContinue
+        }
     }
 }
