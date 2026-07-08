@@ -2,13 +2,13 @@ function Compare-DirectoryContentParallel {
     <#
     .SYNOPSIS
         Compares files between two directories using multithreaded content hashing.
-        
+
     .DESCRIPTION
         Scans a Source directory (or specific file list) and compares against a Destination.
-        
+
         DEFAULT OUTPUT:
         Displays "FileName", "Status", "SourceLWT", and "DestLWT".
-        
+
         HIDDEN OUTPUT:
         Use "| Select-Object *" or "| Format-List" to see hidden properties:
         - SourcePath
@@ -24,7 +24,7 @@ function Compare-DirectoryContentParallel {
         Optional. Array of relative paths. If provided, only these files are checked.
 
     .PARAMETER ShowAll
-        (Alias: IncludeMatch). If specified, the output includes files that match. 
+        (Alias: IncludeMatch). If specified, the output includes files that match.
         Without this, only differences/errors are returned.
 
     .PARAMETER ThrottleLimit
@@ -62,7 +62,7 @@ function Compare-DirectoryContentParallel {
         $files = foreach ($path in $FileList) {
             $cleanPath = $path.TrimStart('\').TrimStart('/')
             $fullSourcePath = Join-Path -Path $Source -ChildPath $cleanPath
-            
+
             if (Test-Path $fullSourcePath -PathType Leaf) {
                 Get-Item $fullSourcePath
             }
@@ -86,7 +86,7 @@ function Compare-DirectoryContentParallel {
     # --- Parallel Processing ---
     $files | ForEach-Object -Parallel {
         $file = $_
-        
+
         # Pass variables into parallel scope
         $srcRoot = $using:Source
         $dstRoot = $using:Destination
@@ -102,8 +102,8 @@ function Compare-DirectoryContentParallel {
             Status     = "Unknown"
             SourcePath = $file.FullName
             DestPath   = $destPath
-            SourceLWT  = $file.LastWriteTime 
-            DestLWT    = $null               
+            SourceLWT  = $file.LastWriteTime
+            DestLWT    = $null
         }
 
         # 1. Check if file exists in destination
@@ -122,11 +122,11 @@ function Compare-DirectoryContentParallel {
             # 3. Compare Content
             if ($srcHash -ne $dstHash) {
                 $props.Status = "ContentMismatch"
-                
+
                 # Check for "Silent" mismatch (Same Size/Time, different content)
-                if ($file.Length -eq $destFile.Length -and 
+                if ($file.Length -eq $destFile.Length -and
                     $file.LastWriteTime.ToString() -eq $destFile.LastWriteTime.ToString()) {
-                    $props.Status = "SilentCorruption" 
+                    $props.Status = "SilentCorruption"
                 }
             }
             elseif ($showAll) {
@@ -136,7 +136,7 @@ function Compare-DirectoryContentParallel {
 
         # --- Output Logic ---
         if ($props.Status -ne "Unknown") {
-            
+
             # Create the object
             $obj = [PSCustomObject]$props
 
@@ -144,7 +144,7 @@ function Compare-DirectoryContentParallel {
             $defaultDisplayProps = @('FileName', 'Status', 'SourceLWT', 'DestLWT')
             $propSet = [System.Management.Automation.PSPropertySet]::new('DefaultDisplayPropertySet', [string[]]$defaultDisplayProps)
             $memberSet = [System.Management.Automation.PSMemberSet]::new('PSStandardMembers', [System.Management.Automation.PSMemberInfo[]]@($propSet))
-            
+
             # Add the member set to the object
             $obj.PSObject.Members.Add($memberSet)
 

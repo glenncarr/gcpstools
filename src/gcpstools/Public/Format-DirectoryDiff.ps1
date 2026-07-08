@@ -25,7 +25,7 @@ function Format-DirectoryDiff {
 
         $items | Format-Table FileName, @{
             Name   = "Status"
-            Expression = { 
+            Expression = {
                 switch ($_.Status) {
                     "Match"             { $Color = $PSStyle.Foreground.BrightGreen }
                     "MissingInDest"     { $Color = $PSStyle.Foreground.BrightYellow }
@@ -34,16 +34,16 @@ function Format-DirectoryDiff {
                     Default { $Color = "" }
                 }
                 "$($Color)$($_.Status)$($PSStyle.Reset)" }
-        }, 
+        },
         @{
             Name   = "SourceLWT"
-            Expression = { 
+            Expression = {
                 if ($_.SourceLWT -gt $_.DestLWT) {
                     $Color = $PSStyle.Foreground.BrightWhite
                 }
                 "$($Color)$($_.SourceLWT)$($PSStyle.Reset)"
                 }
-        },         
+        },
         @{
             Name   = ">/</="
             Expression = { if ($_.SourceLWT -lt $_.DestLWT) { "<" } elseif ($_.SourceLWT -gt $_.DestLWT) { ">" } else { "=" } }
@@ -51,7 +51,7 @@ function Format-DirectoryDiff {
         },
         @{
             Name   = "DestLWT"
-            Expression = { 
+            Expression = {
                 if ($_.SourceLWT -lt $_.DestLWT) {
                     $Color = $PSStyle.Foreground.BrightWhite
                 }
