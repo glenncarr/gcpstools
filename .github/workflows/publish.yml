@@ -8,15 +8,30 @@ on:
 
 jobs:
   publish:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Verify tag matches module version
+        shell: pwsh
+        run: |
+          $tagVersion = "${{ github.ref_name }}".TrimStart('v')
+          $manifest = Import-PowerShellDataFile ./src/gcpstools/gcpstools.psd1
+          if ($manifest.ModuleVersion -ne $tagVersion) {
+              throw "Tag version '$tagVersion' does not match manifest ModuleVersion '$($manifest.ModuleVersion)'."
+          }
+          Write-Host "Version check OK: $tagVersion"
 
       - name: Run Pester Tests
         shell: pwsh
         run: |
-          Install-Module -Name Pester -Force -SkipPublisherCheck
+          Install-Module -Name Pester -MinimumVersion 5.5.0 -MaximumVersion 5.99.99 -Force -SkipPublisherCheck
+          Import-Module Pester -MinimumVersion 5.5.0 -Force
           Invoke-Pester -Path ./tests -CI
+
+      - name: Copy README into module folder
+        shell: pwsh
+        run: Copy-Item ./README.md ./src/gcpstools/README.md -Force
 
       - name: Publish to PowerShell Gallery
         shell: pwsh
