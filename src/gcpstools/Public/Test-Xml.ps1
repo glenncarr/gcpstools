@@ -52,8 +52,8 @@ $settings.Schemas = $schemas
 
 $validationErrors = New-Object System.Collections.Generic.List[string]
 $settings.add_ValidationEventHandler({
-    param($sender, $e)
-    $script:validationErrors.Add("[$($e.Severity)] Line $($e.Exception.LineNumber): $($e.Message)")
+    $validationEvent = $args[1]
+    $script:validationErrors.Add("[$($validationEvent.Severity)] Line $($validationEvent.Exception.LineNumber): $($validationEvent.Message)")
 })
 
 # Create the Reader and execute validation

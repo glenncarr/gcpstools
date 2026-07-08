@@ -3,11 +3,29 @@
 [CmdletBinding()]
 param (
     [switch]$Test,
+    [switch]$Analyze,
     [switch]$Import,
     [switch]$Publish
 )
 
 $modulePath = "$PSScriptRoot\src\gcpstools"
+
+if ($Analyze) {
+    Write-Host "Running PSScriptAnalyzer..." -ForegroundColor Cyan
+    if (-not (Get-Module -ListAvailable -Name PSScriptAnalyzer)) {
+        Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser
+    }
+    Import-Module PSScriptAnalyzer
+    $findings = Invoke-ScriptAnalyzer -Path $modulePath -Recurse
+    if ($findings) {
+        $findings | Format-Table Severity, RuleName, ScriptName, Line, Message -AutoSize -Wrap
+        if ($findings | Where-Object Severity -eq 'Error') {
+            throw "PSScriptAnalyzer reported errors."
+        }
+    } else {
+        Write-Host "PSScriptAnalyzer: no findings." -ForegroundColor Green
+    }
+}
 
 if ($Test) {
     Write-Host "Running Pester tests..." -ForegroundColor Cyan
