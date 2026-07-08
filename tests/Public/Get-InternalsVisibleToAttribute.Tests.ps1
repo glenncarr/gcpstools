@@ -4,7 +4,10 @@ Describe 'Get-InternalsVisibleToAttribute' {
 
         # Build a small real assembly that declares InternalsVisibleTo attributes
         # so the function can actually load and inspect it.
-        $script:asmPath = Join-Path $TestDrive 'IvtSample.dll'
+        # NOTE: [Assembly]::LoadFrom locks the file for the life of the process,
+        # so it is created OUTSIDE TestDrive (with a unique name) to avoid blocking
+        # Pester's TestDrive cleanup.
+        $script:asmPath = Join-Path ([System.IO.Path]::GetTempPath()) "IvtSample_$([guid]::NewGuid().ToString('N')).dll"
         $code = @'
 using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Friend.Tests")]
@@ -12,6 +15,11 @@ using System.Runtime.CompilerServices;
 public class IvtSample { }
 '@
         Add-Type -TypeDefinition $code -OutputAssembly $script:asmPath -OutputType Library
+    }
+
+    AfterAll {
+        # Best-effort cleanup; the file may remain locked until this process exits.
+        Remove-Item -Path $script:asmPath -Force -ErrorAction SilentlyContinue
     }
 
     It 'Writes a terminating error for a non-existent assembly path' {
