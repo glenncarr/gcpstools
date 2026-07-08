@@ -12,7 +12,7 @@
 RootModule = 'gcpstools.psm1'
 
 # Version number of this module.
-ModuleVersion = '0.1.7'
+ModuleVersion = '0.1.8'
 
 # Supported PSEditions
 CompatiblePSEditions = @('Desktop', 'Core')
@@ -119,7 +119,7 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        ReleaseNotes = 'Search-SvnLog no longer prompts to install PwshSpectreConsole on PowerShell 5.1.'
+        ReleaseNotes = 'Search-SvnLog default -Limit changed from 200 to 5.'
 
         # Prerelease string of this module
         # Prerelease = ''

@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.1.8] - 2026-07-08
+
+### Changed
+- `Search-SvnLog`: default `-Limit` reduced from 200 to 5.
+
 ## [0.1.7] - 2026-07-08
 
 ### Changed

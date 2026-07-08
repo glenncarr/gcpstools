@@ -18,7 +18,7 @@
     Working-copy path to run svn log against. Defaults to the current directory.
 
 .PARAMETER Limit
-    Maximum number of log entries to retrieve from SVN. 0 means no limit (all history).
+    Maximum number of log entries to retrieve from SVN. 0 means no limit (all history). Default: 5.
 
 .PARAMETER CaseSensitive
     When specified, the search is case-sensitive.
@@ -66,7 +66,7 @@ param(
 
     [Parameter()]
     [ValidateRange(0, [int]::MaxValue)]
-    [int] $Limit = 200,
+    [int] $Limit = 5,
 
     [Parameter()]
     [switch] $CaseSensitive,
