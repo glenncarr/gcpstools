@@ -1,4 +1,5 @@
 #Requires -Version 7.0
+function Get-SlackChannelHistory {
 <#
 .SYNOPSIS
     Retrieves the last month of your daily standup entries from the
@@ -58,13 +59,13 @@
 
 .EXAMPLE
     $env:SLACK_TOKEN = 'xoxp-...'
-    ./Get-SlackChannelHistory.ps1
+    Get-SlackChannelHistory
 
 .EXAMPLE
-    ./Get-SlackChannelHistory.ps1 -StartDate '2026-06-01' -EndDate '2026-06-30'
+    Get-SlackChannelHistory -StartDate '2026-06-01' -EndDate '2026-06-30'
 
 .EXAMPLE
-    ./Get-SlackChannelHistory.ps1 -Username 'Glenn Carr','Zhimei Liang' -GroupBy Username -AsMarkdown
+    Get-SlackChannelHistory -Username 'Glenn Carr','Zhimei Liang' -GroupBy Username -AsMarkdown
 #>
 [CmdletBinding()]
 param(
@@ -934,4 +935,5 @@ elseif ($AsMarkdown) {
 }
 else {
     $entries
+}
 }

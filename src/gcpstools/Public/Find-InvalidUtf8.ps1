@@ -1,3 +1,4 @@
+function Find-InvalidUtf8 {
 <#
 .SYNOPSIS
     Scans a file for invalid UTF-8 byte sequences and reports where they occur.
@@ -18,10 +19,10 @@
     Defaults to 40.
 
 .EXAMPLE
-    .\Find-InvalidUtf8.ps1 -Path .\Public\API\Progistics.API.xml
+    Find-InvalidUtf8 -Path .\Documentation.xml
 
 .EXAMPLE
-    Get-ChildItem -Recurse -Filter *.cs | .\Find-InvalidUtf8.ps1
+    Get-ChildItem -Recurse -Filter *.cs | Find-InvalidUtf8
 #>
 [CmdletBinding()]
 param(
@@ -155,4 +156,5 @@ process {
             $findings
         }
     }
+}
 }

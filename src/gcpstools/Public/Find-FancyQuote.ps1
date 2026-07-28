@@ -1,3 +1,4 @@
+function Find-FancyQuote {
 <#
 .SYNOPSIS
     Scans a file for "fancy" (non-ASCII) quote characters and reports where they occur.
@@ -25,10 +26,10 @@
     quotes. Off by default.
 
 .EXAMPLE
-    .\Find-FancyQuote.ps1 -Path .\Public\API\Progistics.API.xml
+    Find-FancyQuote -Path .\Documentation.xml
 
 .EXAMPLE
-    Get-ChildItem -Recurse -Filter *.xml | .\Find-FancyQuote.ps1 -Encoding windows-1252
+    Get-ChildItem -Recurse -Filter *.xml | Find-FancyQuote -Encoding windows-1252
 #>
 [CmdletBinding()]
 param(
@@ -115,4 +116,5 @@ process {
             $findings
         }
     }
+}
 }

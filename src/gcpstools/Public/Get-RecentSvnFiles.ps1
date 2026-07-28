@@ -1,3 +1,4 @@
+function Get-RecentSvnFiles {
 <#
 .SYNOPSIS
     Lists files committed to Subversion within a recent time window as full
@@ -22,13 +23,13 @@
     longer exist locally.
 
 .EXAMPLE
-    .\Get-RecentSvnFiles.ps1
+    Get-RecentSvnFiles
 
 .EXAMPLE
-    .\Get-RecentSvnFiles.ps1 -Hours 72 | .\Find-InvalidUtf8.ps1
+    Get-RecentSvnFiles -Hours 72 | Find-InvalidUtf8
 
 .EXAMPLE
-    .\Get-RecentSvnFiles.ps1 -Path .\Public -Hours 8
+    Get-RecentSvnFiles -Path .\Public -Hours 8
 #>
 [CmdletBinding()]
 param(
@@ -94,3 +95,4 @@ foreach ($logentry in $logXml.log.logentry) {
 }
 
 $results | Sort-Object
+}
