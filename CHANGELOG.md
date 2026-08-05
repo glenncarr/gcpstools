@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.1.11] - 2026-08-05
+
+### Added
+- `Compare-WsdlDirectory`: compares the WSDL/XSD service contracts in two
+  directories and reports the specific structural differences (messages,
+  operations, elements, complex/simple types, and individual fields).
+
 ## [0.1.10] - 2026-07-28
 
 ## [0.1.9] - 2026-07-08
