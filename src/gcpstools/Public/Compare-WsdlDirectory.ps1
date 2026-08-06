@@ -50,8 +50,8 @@ function Compare-WsdlDirectory {
 
     .EXAMPLE
         Compare-WsdlDirectory `
-            'C:\dev\Progistics\trunk\Source\Clients\EndOfDay\WCFServices' `
-            'C:\dev\Progistics\releases\Release-6.5\Source\Clients\EndOfDay\WCFServices'
+            'C:\client1\WCFServices' `
+            'C:\client2\WCFServices'
 
     .EXAMPLE
         Compare-WsdlDirectory $trunk $release |
