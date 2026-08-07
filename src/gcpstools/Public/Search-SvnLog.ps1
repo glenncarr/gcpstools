@@ -59,10 +59,10 @@
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]
-    [string[]] $Pattern,
+    [string] $Path = (Get-Location).Path,
 
     [Parameter(Position = 1)]
-    [string] $Path = (Get-Location).Path,
+    [string[]] $Pattern,
 
     [Parameter()]
     [ValidateRange(0, [int]::MaxValue)]
