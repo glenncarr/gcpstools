@@ -1,4 +1,7 @@
 # build.ps1 - Automate local building and testing
+# Run with PowerShell 7+ (pwsh). Windows PowerShell 5.1 lacks
+# Import-PowerShellDataFile, which silently breaks -BumpVersion.
+#requires -Version 7.0
 
 [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
 param (
