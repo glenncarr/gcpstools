@@ -45,6 +45,10 @@
     When specified, emits uncolored plain-text output to the pipeline (no ANSI
     colors or Spectre panels), making it easy to copy or redirect to a file.
 
+.PARAMETER Clipboard
+    Copies the plain-text rendering of the results to the clipboard while still
+    showing the normal colored output on screen. Combine with any display mode.
+
 .EXAMPLE
     Search-SvnLog.ps1 -Pattern "fix null reference"
 
@@ -100,6 +104,9 @@ param(
 
     [Parameter()]
     [switch] $PlainText,
+
+    [Parameter()]
+    [switch] $Clipboard,
 
     [Parameter()]
     [ValidateRange(0, [int]::MaxValue)]
@@ -286,46 +293,51 @@ if ($Last) {
 # --- Display results -----------------------------------------------------------
 $displayCount = 0
 
+# Build the plain-text lines for a single log entry (shared by -PlainText and -Clipboard).
+function Format-PlainSvnEntry {
+    param($Entry, [int]$PatternIndex)
+
+    $header = "r$($Entry.revision) | $(if ($Entry.author) { $Entry.author } else { '(none)' })"
+    if ($Pattern -and $Pattern.Count -gt 1) {
+        $header += " | [$($PatternIndex + 1)] $($Pattern[$PatternIndex])"
+    }
+    if ($Entry.date) {
+        $d = [datetime]::Parse($Entry.date, $null, [System.Globalization.DateTimeStyles]::RoundtripKind).ToLocalTime()
+        $header += " | $d"
+    }
+    $header
+
+    $msg = ($(if ($Entry.msg) { $Entry.msg } else { '' }) -replace '\r', '').TrimEnd()
+    if ($ShowPaths) { 'Message:' }
+    foreach ($line in ($msg -split '\n')) { "  $line" }
+
+    if ($ShowPaths) {
+        $paths = if ($Entry.paths) { $Entry.paths.path } else { $null }
+        if ($paths) {
+            'Paths:'
+            foreach ($p in $paths) {
+                $cfPath   = $p.GetAttribute('copyfrom-path')
+                $cfRev    = $p.GetAttribute('copyfrom-rev')
+                $copyFrom = if ($cfPath) { "  [copied from $cfPath@$cfRev]" } else { '' }
+                $nk       = $p.GetAttribute('node-kind')
+                $nodeKind = if ($nk) { " ($nk)" } else { '' }
+                "  [$($p.action)]$nodeKind $($p.'#text')$copyFrom"
+            }
+        }
+    }
+}
+
 foreach ($result in $results) {
     $entry = $result.Entry
     $color = $colorPalette[$result.PatternIndex % $colorPalette.Count]
 
     # --- Plain-text output (copy-friendly, no colors) --------------------------
     if ($PlainText) {
-        $ptHeader = "r$($entry.revision) | $(if ($entry.author) { $entry.author } else { '(none)' })"
-        if ($Pattern -and $Pattern.Count -gt 1) {
-            $ptHeader += " | [$($result.PatternIndex + 1)] $($Pattern[$result.PatternIndex])"
+        if ($displayCount -gt 0) {
+            Write-Output ('-' * 60)
         }
-        if ($entry.date) {
-            $ptDate = [datetime]::Parse($entry.date, $null, [System.Globalization.DateTimeStyles]::RoundtripKind).ToLocalTime()
-            $ptHeader += " | $ptDate"
-        }
-        Write-Output ''
-        Write-Output $ptHeader
-
-        $ptMsg = ($(if ($entry.msg) { $entry.msg } else { '' }) -replace '\r', '').TrimEnd()
-        if ($ShowPaths) {
-            Write-Output "Message:"
-        }
-        foreach ($line in ($ptMsg -split '\n')) {
-            Write-Output "  $line"
-        }
-
-        if ($ShowPaths) {
-            $paths = if ($entry.paths) { $entry.paths.path } else { $null }
-            if ($paths) {
-                Write-Output "Paths:"
-                foreach ($p in $paths) {
-                    $cfPath   = $p.GetAttribute('copyfrom-path')
-                    $cfRev    = $p.GetAttribute('copyfrom-rev')
-                    $copyFrom = if ($cfPath) { "  [copied from $cfPath@$cfRev]" } else { '' }
-                    $nk       = $p.GetAttribute('node-kind')
-                    $nodeKind = if ($nk) { " ($nk)" } else { '' }
-                    Write-Output "  [$($p.action)]$nodeKind $($p.'#text')$copyFrom"
-                }
-            }
-        }
-
+        Format-PlainSvnEntry $entry $result.PatternIndex
+        $displayCount++
         continue
     }
 
@@ -471,5 +483,21 @@ foreach ($result in $results) {
 if (-not $PlainText) {
     Write-Host "Total matches: $($results.Count)" -ForegroundColor Green
     Write-Host ''
+}
+
+if ($Clipboard) {
+    if (-not (Get-Command Set-Clipboard -ErrorAction SilentlyContinue)) {
+        Write-Warning "Set-Clipboard is not available on this platform; skipping clipboard copy."
+    } else {
+        $clipLines = [System.Collections.Generic.List[string]]::new()
+        for ($i = 0; $i -lt $results.Count; $i++) {
+            if ($i -gt 0) { $clipLines.Add('-' * 60) }
+            foreach ($l in (Format-PlainSvnEntry $results[$i].Entry $results[$i].PatternIndex)) {
+                $clipLines.Add($l)
+            }
+        }
+        ($clipLines -join [Environment]::NewLine) | Set-Clipboard
+        Write-Host "Copied $($results.Count) revision(s) as plain text to the clipboard." -ForegroundColor Green
+    }
 }
 }

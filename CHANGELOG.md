@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- `Search-SvnLog`: `-Clipboard` switch copies the plain-text rendering of the
+  results to the clipboard while still showing the normal colored output.
+
+### Changed
+- `Search-SvnLog`: plain-text output now separates revisions with a dashed line
+  instead of a blank line, and no longer prints a blank line between the message
+  and the changed paths.
+
 ## [0.1.15] - 2026-08-08
 
 ### Changed
