@@ -368,6 +368,29 @@ foreach ($result in $results) {
     }
     Write-Host ''
 
+    # Commit message — colored by matching pattern only if -Pattern was specified
+    $msg = $(if ($entry.msg) { $entry.msg } else { '' }) -replace '\r', ''
+    if ($hasSpectre) {
+        $spectreColor = $color.Spectre
+        $escapedMsg = $msg | Get-SpectreEscapedText
+        $prevRendering = $PSStyle.OutputRendering
+        $PSStyle.OutputRendering = 'Ansi'
+        $panel = ($escapedMsg | Format-SpectrePanel -Header "Message" -Color $spectreColor -Expand | Out-String).TrimStart()
+        $PSStyle.OutputRendering = $prevRendering
+        [System.Console]::Write($panel)
+    } else {
+        Write-Host "Message  :" -ForegroundColor Yellow
+        $lines = $msg -split '\n'
+        foreach ($line in $lines) {
+            if ($Pattern) {
+                Write-Host "  $line" -NoNewline -ForegroundColor $color.Fg -BackgroundColor $color.Bg
+                Write-Host ''
+            } else {
+                Write-Host "  $line"
+            }
+        }
+    }
+
     # Changed paths
     if ($ShowPaths) {
     $paths = if ($entry.paths) { $entry.paths.path } else { $null }
@@ -431,29 +454,6 @@ foreach ($result in $results) {
             }
         }
     }
-    }
-
-    # Commit message — colored by matching pattern only if -Pattern was specified
-    $msg = $(if ($entry.msg) { $entry.msg } else { '' }) -replace '\r', ''
-    if ($hasSpectre) {
-        $spectreColor = $color.Spectre
-        $escapedMsg = $msg | Get-SpectreEscapedText
-        $prevRendering = $PSStyle.OutputRendering
-        $PSStyle.OutputRendering = 'Ansi'
-        $panel = ($escapedMsg | Format-SpectrePanel -Header "Message" -Color $spectreColor -Expand | Out-String).TrimStart()
-        $PSStyle.OutputRendering = $prevRendering
-        [System.Console]::Write($panel)
-    } else {
-        Write-Host "Message  :" -ForegroundColor Yellow
-        $lines = $msg -split '\n'
-        foreach ($line in $lines) {
-            if ($Pattern) {
-                Write-Host "  $line" -NoNewline -ForegroundColor $color.Fg -BackgroundColor $color.Bg
-                Write-Host ''
-            } else {
-                Write-Host "  $line"
-            }
-        }
     }
 
     $displayCount++

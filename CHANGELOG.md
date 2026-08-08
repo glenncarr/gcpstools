@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.1.15] - 2026-08-08
+
+### Changed
+- `Search-SvnLog`: changed paths now always display after the commit message,
+  regardless of `-PlainText`.
+
 ## [0.1.14] - 2026-08-08
 
 ### Added
