@@ -300,9 +300,10 @@ foreach ($result in $results) {
             $ptDate = [datetime]::Parse($entry.date, $null, [System.Globalization.DateTimeStyles]::RoundtripKind).ToLocalTime()
             $ptHeader += " | $ptDate"
         }
+        Write-Output ''
         Write-Output $ptHeader
 
-        $ptMsg = $(if ($entry.msg) { $entry.msg } else { '' }) -replace '\r', ''
+        $ptMsg = ($(if ($entry.msg) { $entry.msg } else { '' }) -replace '\r', '').TrimEnd()
         if ($ShowPaths) {
             Write-Output "Message:"
         }
@@ -325,11 +326,11 @@ foreach ($result in $results) {
             }
         }
 
-        Write-Output ''
         continue
     }
 
     # Core fields — single line: Revision, Author, Pattern, Date
+    Write-Host ''
     Write-Host "r" -NoNewline -ForegroundColor Yellow
     Write-Host $entry.revision -NoNewline -ForegroundColor $color.Fg -BackgroundColor $color.Bg
     Write-Host " | " -NoNewline -ForegroundColor DarkGray
@@ -369,15 +370,15 @@ foreach ($result in $results) {
     Write-Host ''
 
     # Commit message — colored by matching pattern only if -Pattern was specified
-    $msg = $(if ($entry.msg) { $entry.msg } else { '' }) -replace '\r', ''
+    $msg = ($(if ($entry.msg) { $entry.msg } else { '' }) -replace '\r', '').TrimEnd()
     if ($hasSpectre) {
         $spectreColor = $color.Spectre
         $escapedMsg = $msg | Get-SpectreEscapedText
         $prevRendering = $PSStyle.OutputRendering
         $PSStyle.OutputRendering = 'Ansi'
-        $panel = ($escapedMsg | Format-SpectrePanel -Header "Message" -Color $spectreColor -Expand | Out-String).TrimStart()
+        $panel = ($escapedMsg | Format-SpectrePanel -Header "Message" -Color $spectreColor -Expand | Out-String).Trim()
         $PSStyle.OutputRendering = $prevRendering
-        [System.Console]::Write($panel)
+        [System.Console]::WriteLine($panel)
     } else {
         Write-Host "Message  :" -ForegroundColor Yellow
         $lines = $msg -split '\n'
