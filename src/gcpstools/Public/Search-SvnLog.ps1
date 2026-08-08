@@ -41,6 +41,10 @@
 .PARAMETER Last
     Display only the last N matching revisions (newest).
 
+.PARAMETER PlainText
+    When specified, emits uncolored plain-text output to the pipeline (no ANSI
+    colors or Spectre panels), making it easy to copy or redirect to a file.
+
 .EXAMPLE
     Search-SvnLog.ps1 -Pattern "fix null reference"
 
@@ -55,6 +59,9 @@
 
 .EXAMPLE
     Search-SvnLog.ps1 -Pattern "bug 1234","bug 5678" -SimpleMatch
+
+.EXAMPLE
+    Search-SvnLog.ps1 -Pattern "deploy" -PlainText | Set-Clipboard
 #>
 [CmdletBinding()]
 param(
@@ -92,6 +99,9 @@ param(
     [int] $Last,
 
     [Parameter()]
+    [switch] $PlainText,
+
+    [Parameter()]
     [ValidateRange(0, [int]::MaxValue)]
     [int] $PageSize = 0
 )
@@ -112,7 +122,7 @@ $colorPalette = @(
 
 # --- Check for PwshSpectreConsole module (PowerShell 7+ only) -------------------
 $hasSpectre = $false
-if ($PSVersionTable.PSVersion.Major -ge 7) {
+if (-not $PlainText -and $PSVersionTable.PSVersion.Major -ge 7) {
     $hasSpectre = $null -ne (Get-Module -ListAvailable -Name PwshSpectreConsole)
     if (-not $hasSpectre) {
         Write-Host "PwshSpectreConsole module not found. Install it for enhanced output?" -ForegroundColor Yellow
@@ -157,26 +167,28 @@ if ($Limit -gt 0) {
     $svnArgs += '--limit', $Limit
 }
 
-Write-Host "Fetching SVN log for: $Path" -ForegroundColor Cyan
-if ($Limit -gt 0) {
-    Write-Host "  (limited to last $Limit entries)" -ForegroundColor DarkGray
-} else {
-    Write-Host "  (no limit — retrieving all entries)" -ForegroundColor DarkGray
-}
-Write-Host ''
-if ($Pattern) {
-    Write-Host "Patterns:" -ForegroundColor Cyan
-    for ($i = 0; $i -lt $Pattern.Count; $i++) {
-        $c = $colorPalette[$i % $colorPalette.Count]
-        Write-Host "  [$($i + 1)] " -NoNewline -ForegroundColor Cyan
-        Write-Host $Pattern[$i] -NoNewline -ForegroundColor $c.Fg -BackgroundColor $c.Bg
-        Write-Host ''
+if (-not $PlainText) {
+    Write-Host "Fetching SVN log for: $Path" -ForegroundColor Cyan
+    if ($Limit -gt 0) {
+        Write-Host "  (limited to last $Limit entries)" -ForegroundColor DarkGray
+    } else {
+        Write-Host "  (no limit — retrieving all entries)" -ForegroundColor DarkGray
     }
+    Write-Host ''
+    if ($Pattern) {
+        Write-Host "Patterns:" -ForegroundColor Cyan
+        for ($i = 0; $i -lt $Pattern.Count; $i++) {
+            $c = $colorPalette[$i % $colorPalette.Count]
+            Write-Host "  [$($i + 1)] " -NoNewline -ForegroundColor Cyan
+            Write-Host $Pattern[$i] -NoNewline -ForegroundColor $c.Fg -BackgroundColor $c.Bg
+            Write-Host ''
+        }
+    }
+    if ($IncludeFile) {
+        Write-Host "File filter: $IncludeFile" -ForegroundColor Cyan
+    }
+    Write-Host ''
 }
-if ($IncludeFile) {
-    Write-Host "File filter: $IncludeFile" -ForegroundColor Cyan
-}
-Write-Host ''
 
 # --- Retrieve and parse log ----------------------------------------------------
 $rawXml = svn @svnArgs 2>&1
@@ -245,8 +257,10 @@ if ($results.Count -eq 0) {
     return
 }
 
-Write-Host "Found $($results.Count) matching commit(s)" -ForegroundColor Green
-Write-Host ''
+if (-not $PlainText) {
+    Write-Host "Found $($results.Count) matching commit(s)" -ForegroundColor Green
+    Write-Host ''
+}
 
 # --- Sort results (default: oldest first) --------------------------------------
 if (-not $Descending) {
@@ -275,6 +289,45 @@ $displayCount = 0
 foreach ($result in $results) {
     $entry = $result.Entry
     $color = $colorPalette[$result.PatternIndex % $colorPalette.Count]
+
+    # --- Plain-text output (copy-friendly, no colors) --------------------------
+    if ($PlainText) {
+        $ptHeader = "r$($entry.revision) | $(if ($entry.author) { $entry.author } else { '(none)' })"
+        if ($Pattern -and $Pattern.Count -gt 1) {
+            $ptHeader += " | [$($result.PatternIndex + 1)] $($Pattern[$result.PatternIndex])"
+        }
+        if ($entry.date) {
+            $ptDate = [datetime]::Parse($entry.date, $null, [System.Globalization.DateTimeStyles]::RoundtripKind).ToLocalTime()
+            $ptHeader += " | $ptDate"
+        }
+        Write-Output $ptHeader
+
+        $ptMsg = $(if ($entry.msg) { $entry.msg } else { '' }) -replace '\r', ''
+        if ($ShowPaths) {
+            Write-Output "Message:"
+        }
+        foreach ($line in ($ptMsg -split '\n')) {
+            Write-Output "  $line"
+        }
+
+        if ($ShowPaths) {
+            $paths = if ($entry.paths) { $entry.paths.path } else { $null }
+            if ($paths) {
+                Write-Output "Paths:"
+                foreach ($p in $paths) {
+                    $cfPath   = $p.GetAttribute('copyfrom-path')
+                    $cfRev    = $p.GetAttribute('copyfrom-rev')
+                    $copyFrom = if ($cfPath) { "  [copied from $cfPath@$cfRev]" } else { '' }
+                    $nk       = $p.GetAttribute('node-kind')
+                    $nodeKind = if ($nk) { " ($nk)" } else { '' }
+                    Write-Output "  [$($p.action)]$nodeKind $($p.'#text')$copyFrom"
+                }
+            }
+        }
+
+        Write-Output ''
+        continue
+    }
 
     # Core fields — single line: Revision, Author, Pattern, Date
     Write-Host "r" -NoNewline -ForegroundColor Yellow
@@ -414,6 +467,8 @@ foreach ($result in $results) {
     }
 }
 
-Write-Host "Total matches: $($results.Count)" -ForegroundColor Green
-Write-Host ''
+if (-not $PlainText) {
+    Write-Host "Total matches: $($results.Count)" -ForegroundColor Green
+    Write-Host ''
+}
 }

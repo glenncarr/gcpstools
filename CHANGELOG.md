@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.1.14] - 2026-08-08
+
+### Added
+- `Search-SvnLog`: `-PlainText` switch emits uncolored, copy-friendly output to
+  the pipeline. With `-ShowPaths`, changed paths are listed after the message
+  and a `Message:` label is added.
+
 ## [0.1.13] - 2026-08-07
 
 ## [0.1.12] - 2026-08-06
