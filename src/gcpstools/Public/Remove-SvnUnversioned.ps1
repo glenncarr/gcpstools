@@ -8,12 +8,9 @@ function Remove-SvnUnversioned {
         Supports -WhatIf to preview deletions.
         Supports -Exclude to skip specific files or patterns.
     #>
-    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
+    [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
     param (
-        [Parameter(Mandatory = $false,
-                   ValueFromPipeline = $true,
-                   ValueFromPipelineByPropertyName = $true,
-                   Position = 0)]
+        [Parameter(ValueFromPipeline, ValueFromPipelineByPropertyName, Position = 0)]
         [Alias("FullName")]
         [string[]]$Path = ".",
 
