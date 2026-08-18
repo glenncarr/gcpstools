@@ -17,7 +17,7 @@ Describe 'Remove-ObjectDirectory' {
         New-Item -ItemType Directory -Path (Join-Path $root 'obj')        | Out-Null
         New-Item -ItemType Directory -Path (Join-Path $root 'src\obj')    | Out-Null
 
-        Remove-ObjectDirectory -Path $root
+        Remove-ObjectDirectory -Path $root -Confirm:$false
 
         Join-Path $root 'obj'     | Should -Not -Exist
         Join-Path $root 'src\obj' | Should -Not -Exist
@@ -26,6 +26,6 @@ Describe 'Remove-ObjectDirectory' {
     It 'Does not throw when no obj directories exist' {
         $root = New-Item -ItemType Directory -Path (Join-Path $TestDrive 'empty')
 
-        { Remove-ObjectDirectory -Path $root } | Should -Not -Throw
+        { Remove-ObjectDirectory -Path $root -Confirm:$false } | Should -Not -Throw
     }
 }

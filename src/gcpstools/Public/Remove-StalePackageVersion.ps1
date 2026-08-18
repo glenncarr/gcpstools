@@ -79,6 +79,6 @@ function Remove-StalePackageVersion {
 
     if ($failures.Count -gt 0) {
         $noun = if ($failures.Count -eq 1) { 'directory' } else { 'directories' }
-        throw "Failed to delete $($failures.Count) package version $noun:`n$($failures -join "`n")"
+        throw "Failed to delete $($failures.Count) package version ${noun}:`n$($failures -join "`n")"
     }
 }
