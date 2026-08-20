@@ -1,4 +1,3 @@
-#Requires -Version 7.0
 function Get-SlackChannelHistory {
 <#
 .SYNOPSIS
@@ -21,6 +20,15 @@ function Get-SlackChannelHistory {
     Provide the token via the -Token parameter or the SLACK_TOKEN environment
     variable. Never hard-code the token in the script or commit it to source
     control.
+
+    For shared use, each user should create and install their own Slack app at
+    https://api.slack.com/apps. Add the scopes listed above under Bot Token
+    Scopes, install the app to the workspace, and use the resulting xoxb- bot
+    token. Invite that app to each private channel it should read. As an
+    alternative, install the app with the same scopes under User Token Scopes
+    and use the resulting xoxp- token; it can read private channels where that
+    user is a member. Do not share personal tokens, app-level xapp- tokens, or
+    signing secrets with other users.
 
 .PARAMETER Token
     Slack API token (xoxp-... user token or xoxb-... bot token). Defaults to
@@ -906,6 +914,10 @@ $($body.ToString())
     Start-Process $tempFile
 }
 elseif ($AsMarkdown) {
+    if (-not (Get-Command -Name Show-Markdown -ErrorAction SilentlyContinue)) {
+        throw 'The -AsMarkdown parameter requires PowerShell 7 or the Show-Markdown cmdlet.'
+    }
+
     $sb = [System.Text.StringBuilder]::new()
     $who = if ($Username) { $Username -join ', ' } else { 'all users' }
     [void]$sb.AppendLine('# Standup entries')
