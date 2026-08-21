@@ -117,6 +117,11 @@ if ($Tag) {
         throw "Not inside a git working tree."
     }
 
+    $currentBranch = [string](git branch --show-current 2>$null)
+    if ($LASTEXITCODE -ne 0 -or $currentBranch.Trim() -ne 'main') {
+        throw "Release tagging requires the current branch to be 'main'; current branch is '$($currentBranch.Trim())'."
+    }
+
     # The tag points at HEAD, so refuse a dirty tree: the version bump and
     # CHANGELOG update must be committed before tagging.
     if (git status --porcelain) {
@@ -132,8 +137,13 @@ if ($Tag) {
         throw "Tag '$tagName' already exists locally. Bump the version or delete the tag first."
     }
 
-    $action = "create annotated tag '$tagName' and push it to origin (this triggers the Gallery publish workflow)"
+    $action = "push main, create annotated tag '$tagName', and push it to origin (this triggers the Gallery publish workflow)"
     if ($PSCmdlet.ShouldProcess('origin', $action)) {
+        git push origin main
+        if ($LASTEXITCODE -ne 0) {
+            throw "git push origin main failed. Resolve any remote divergence and retry."
+        }
+
         git tag -a $tagName -m $tagName
         if ($LASTEXITCODE -ne 0) { throw "git tag failed." }
 
