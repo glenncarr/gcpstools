@@ -1,15 +1,14 @@
 function Get-SlackChannelHistory {
 <#
 .SYNOPSIS
-    Retrieves the last month of your daily standup entries from the
-    `se-daily-standups` channel in the ConnectShip Slack workspace.
+        Retrieves messages from a Slack channel for a specified date range.
 
 .DESCRIPTION
     Uses the Slack Web API to:
-      1. Resolve the channel ID for `se-daily-standups`.
+            1. Resolve the channel ID for the specified channel.
       2. Resolve the Slack user ID for the specified display / real name.
-      3. Pull the channel history for the last month and keep only the
-         messages authored by that user.
+            3. Pull the channel history for the requested date range and keep only
+                 the messages authored by the specified users.
 
     Authentication is via a Slack user or bot token. The token must have at
     least the following scopes:
@@ -35,7 +34,7 @@ function Get-SlackChannelHistory {
     the SLACK_TOKEN environment variable.
 
 .PARAMETER Channel
-    The channel name (without the leading #). Defaults to `se-daily-standups`.
+    The channel name (without the leading #). Defaults to `general`.
 
 .PARAMETER Username
     One or more display names or real names of the authors to include. If
@@ -67,18 +66,18 @@ function Get-SlackChannelHistory {
 
 .EXAMPLE
     $env:SLACK_TOKEN = 'xoxp-...'
-    Get-SlackChannelHistory
+    Get-SlackChannelHistory -Channel 'general'
 
 .EXAMPLE
     Get-SlackChannelHistory -StartDate '2026-06-01' -EndDate '2026-06-30'
 
 .EXAMPLE
-    Get-SlackChannelHistory -Username 'Glenn Carr','Zhimei Liang' -GroupBy Username -AsMarkdown
+    Get-SlackChannelHistory -Username 'Alex Smith','Jordan Lee' -GroupBy Username -AsMarkdown
 #>
 [CmdletBinding()]
 param(
     [string]$Token = $env:SLACK_TOKEN,
-    [string]$Channel = 'se-daily-standups',
+    [string]$Channel = 'general',
     [ArgumentCompleter({
         param($commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters)
 
@@ -88,12 +87,12 @@ param(
         # defaults as the script) and offers the members of that channel.
         $token = if ($fakeBoundParameters.ContainsKey('Token')) { $fakeBoundParameters['Token'] } else { $env:SLACK_TOKEN }
         if ([string]::IsNullOrWhiteSpace($token)) { return }
-        $channel = if ($fakeBoundParameters.ContainsKey('Channel')) { $fakeBoundParameters['Channel'] } else { 'se-daily-standups' }
+        $channel = if ($fakeBoundParameters.ContainsKey('Channel')) { $fakeBoundParameters['Channel'] } else { 'general' }
 
         # Cache resolved names per channel for the session so repeated tab
         # presses do not re-hit the Slack API.
-        if (-not $global:SeStandupMemberCache) { $global:SeStandupMemberCache = @{} }
-        $names = $global:SeStandupMemberCache[$channel]
+        if (-not $global:SlackChannelMemberCache) { $global:SlackChannelMemberCache = @{} }
+        $names = $global:SlackChannelMemberCache[$channel]
 
         if (-not $names) {
             try {
@@ -151,7 +150,7 @@ param(
                 } while ($cursor)
 
                 $names = @($collected | Sort-Object -Unique)
-                $global:SeStandupMemberCache[$channel] = $names
+                $global:SlackChannelMemberCache[$channel] = $names
             }
             catch { return }
         }
