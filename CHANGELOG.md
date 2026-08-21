@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.1.25] - 2026-08-21
+
+### Changed
+- `Get-SlackChannelHistory`: expanded help documentation with step-by-step
+  instructions for creating and installing a personal Slack app, configuring
+  the required scopes, obtaining a user token, accessing private channels,
+  and protecting credentials.
+
 ## [0.1.24] - 2026-08-21
 
 ## [0.1.23] - 2026-08-21

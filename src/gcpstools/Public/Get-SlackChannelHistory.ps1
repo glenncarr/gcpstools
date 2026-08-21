@@ -29,6 +29,52 @@ function Get-SlackChannelHistory {
     user is a member. Do not share personal tokens, app-level xapp- tokens, or
     signing secrets with other users.
 
+    Each user must create their own app because the api.slack.com/apps page
+    only lists apps you created (or were added to as a collaborator); another
+    person will not see your app or an install button there. Creating a
+    personal app also avoids sharing tokens or secrets. A user token (xoxp-)
+    is recommended: it reads exactly the channels the running user already
+    belongs to, with no need to invite a bot into each channel.
+
+    Step-by-step: create and install your own app (user token, xoxp-)
+      1.  Sign in to Slack in a browser, then go to https://api.slack.com/apps.
+      2.  Click "Create New App", then choose "From scratch".
+      3.  Enter an App Name (e.g. "My Channel History Reader"), pick the
+          workspace you want to read from, and click "Create App".
+      4.  In the left sidebar under "Features", click "OAuth & Permissions".
+      5.  Scroll to "Scopes" and, under "User Token Scopes" (NOT "Bot Token
+          Scopes"), click "Add an OAuth Scope" and add each of these:
+            - channels:read      (list/resolve public channels)
+            - channels:history   (read public channel messages)
+            - groups:read        (list/resolve private channels you are in)
+            - groups:history     (read private channel messages you are in)
+            - users:read         (resolve author display / real names)
+      6.  Scroll back up to "OAuth Tokens for Your Workspace" and click
+          "Install to Workspace" (if you changed scopes later, this button
+          becomes "Reinstall to Workspace" - click it again).
+      7.  Review the permission prompt and click "Allow".
+      8.  You are returned to the "OAuth & Permissions" page. Copy the
+          "User OAuth Token" - it starts with "xoxp-". This is your token.
+      9.  You do NOT need to set a Redirect URL for this manual install flow;
+          leave the "Redirect URLs" section blank.
+      10. Provide the token to this function, either per-session via the
+          environment variable:
+              $env:SLACK_TOKEN = 'xoxp-your-token-here'
+              Get-SlackChannelHistory -Channel 'general'
+          or directly with the -Token parameter:
+              Get-SlackChannelHistory -Token 'xoxp-your-token-here' -Channel 'general'
+
+    Notes:
+      - A user token (xoxp-) can only read channels you are a member of, so
+        join any channel you want to query before running the function.
+      - If you prefer a bot token (xoxb-) instead, add the same scopes under
+        "Bot Token Scopes" in step 5, install the app, copy the "Bot User
+        OAuth Token" (starts with "xoxb-"), and invite the app to each
+        private channel with "/invite @YourAppName".
+      - Keep your token secret: do not commit it to source control, and do
+        not paste it into shared chats or tickets. Anyone with the token can
+        act as you (xoxp-) or as the app (xoxb-) within the granted scopes.
+
 .PARAMETER Token
     Slack API token (xoxp-... user token or xoxb-... bot token). Defaults to
     the SLACK_TOKEN environment variable.
