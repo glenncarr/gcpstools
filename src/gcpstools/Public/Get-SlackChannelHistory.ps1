@@ -5,10 +5,10 @@ function Get-SlackChannelHistory {
 
 .DESCRIPTION
     Uses the Slack Web API to:
-            1. Resolve the channel ID for the specified channel.
-      2. Resolve the Slack user ID for the specified display / real name.
-            3. Pull the channel history for the requested date range and keep only
-                 the messages authored by the specified users.
+        1. Resolve the channel ID for the specified channel.
+        2. Resolve the Slack user ID for the specified display / real name.
+        3. Pull the channel history for the requested date range and keep only
+           the messages authored by the specified users.
 
     Authentication is via a Slack user or bot token. The token must have at
     least the following scopes:
