@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.1.26] - 2026-08-21
+
+### Added
+- `Get-SlackChannelHistory`: `-AppManifest` and `-BotManifest` switches emit a
+  plain-text Slack app manifest (YAML) for the user-token (xoxp-) and bot-token
+  (xoxb-) setups respectively, so a matching app can be created via
+  "Create New App" -> "From an app manifest". Each switch is used on its own and
+  cannot be combined with the history-retrieval parameters.
+- Repository copies of the generated manifests: `slack-app-manifest.yaml`
+  (user token) and `slack-app-manifest-bot.yaml` (bot token).
+
+### Changed
+- `Get-SlackChannelHistory`: expanded help documentation describing how to
+  create the Slack app from either manifest switch.
+
 ## [0.1.25] - 2026-08-21
 
 ### Changed

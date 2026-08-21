@@ -75,6 +75,38 @@ function Get-SlackChannelHistory {
         not paste it into shared chats or tickets. Anyone with the token can
         act as you (xoxp-) or as the app (xoxb-) within the granted scopes.
 
+    Faster setup with an app manifest
+      Instead of adding scopes by hand (step 5 above), this function can emit a
+      ready-made Slack app manifest so a new app is created with the correct
+      scopes already configured. Use one of the two switches, on its own:
+
+        -AppManifest  Produces the YAML for a user-token (xoxp-) app. This is
+                      the recommended Option C setup: it reads exactly the
+                      channels the running user already belongs to.
+
+        -BotManifest  Produces the YAML for a bot-token (xoxb-) app, including a
+                      bot user. Use this when you want one shared app that is
+                      invited into channels rather than acting as an individual.
+
+      To create the app from a manifest:
+        1.  Save the manifest to a file, e.g.:
+                Get-SlackChannelHistory -AppManifest | Set-Content slack-app-manifest.yaml
+                Get-SlackChannelHistory -BotManifest | Set-Content slack-app-manifest-bot.yaml
+            (a copy of each file is also included in the module's repository).
+        2.  Go to https://api.slack.com/apps and click "Create New App".
+        3.  Choose "From an app manifest", pick your workspace, and click Next.
+        4.  Paste the YAML (or upload the saved file), click Next, then Create.
+        5.  Open "OAuth & Permissions" and click "Install to Workspace" ->
+            "Allow".
+        6.  For -AppManifest, copy the "User OAuth Token" (xoxp-). For
+            -BotManifest, copy the "Bot User OAuth Token" (xoxb-) and invite the
+            app to each private channel with "/invite @Channel History Reader".
+        7.  Supply the token via -Token or the SLACK_TOKEN environment variable
+            as shown above. No Redirect URL is required for this flow.
+
+      Both switches only print text; they do not contact Slack, do not install
+      anything, and cannot be combined with the history-retrieval parameters.
+
 .PARAMETER Token
     Slack API token (xoxp-... user token or xoxb-... bot token). Defaults to
     the SLACK_TOKEN environment variable.
@@ -110,6 +142,24 @@ function Get-SlackChannelHistory {
 .PARAMETER AsJson
     Emit the results as JSON instead of PowerShell objects.
 
+.PARAMETER AppManifest
+    Output a plain-text Slack app manifest (YAML) for the user-token (xoxp-)
+    variant. Paste it into https://api.slack.com/apps ("Create New App" -> "From
+    an app manifest") to create an app pre-configured with the User Token Scopes
+    this function needs (see Option C in the description). This switch is used on
+    its own and cannot be combined with any of the other parameters. It does not
+    call Slack; the user still installs the created app and copies their own
+    xoxp- token.
+
+.PARAMETER BotManifest
+    Output a plain-text Slack app manifest (YAML) for the bot-token (xoxb-)
+    variant. Paste it into https://api.slack.com/apps ("Create New App" -> "From
+    an app manifest") to create an app pre-configured with the Bot Token Scopes
+    this function needs and a bot user. This switch is used on its own and cannot
+    be combined with any of the other parameters. It does not call Slack; the
+    user still installs the created app, copies the Bot User OAuth Token (xoxb-),
+    and invites the app to each private channel it should read.
+
 .EXAMPLE
     $env:SLACK_TOKEN = 'xoxp-...'
     Get-SlackChannelHistory -Channel 'general'
@@ -119,11 +169,20 @@ function Get-SlackChannelHistory {
 
 .EXAMPLE
     Get-SlackChannelHistory -Username 'Alex Smith','Jordan Lee' -GroupBy Username -AsMarkdown
+
+.EXAMPLE
+    Get-SlackChannelHistory -AppManifest | Set-Content slack-app-manifest.yaml
+
+.EXAMPLE
+    Get-SlackChannelHistory -BotManifest | Set-Content slack-app-manifest-bot.yaml
 #>
-[CmdletBinding()]
+[CmdletBinding(DefaultParameterSetName = 'History')]
 param(
+    [Parameter(ParameterSetName = 'History')]
     [string]$Token = $env:SLACK_TOKEN,
+    [Parameter(ParameterSetName = 'History')]
     [string]$Channel = 'general',
+    [Parameter(ParameterSetName = 'History')]
     [ArgumentCompleter({
         param($commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters)
 
@@ -212,19 +271,87 @@ param(
             }
     })]
     [string[]]$Username,
+    [Parameter(ParameterSetName = 'History')]
     [ValidateSet('Username', 'Date')]
     [string]$GroupBy = 'Date',
+    [Parameter(ParameterSetName = 'History')]
     [int]$Months = 1,
+    [Parameter(ParameterSetName = 'History')]
     [Nullable[datetime]]$StartDate,
+    [Parameter(ParameterSetName = 'History')]
     [Nullable[datetime]]$EndDate,
+    [Parameter(ParameterSetName = 'History')]
     [switch]$AsJson,
+    [Parameter(ParameterSetName = 'History')]
     [switch]$AsMarkdown,
+    [Parameter(ParameterSetName = 'History')]
     [switch]$UseBrowser,
-    [switch]$ExcludeThreadReplies
+    [Parameter(ParameterSetName = 'History')]
+    [switch]$ExcludeThreadReplies,
+    [Parameter(ParameterSetName = 'UserManifest', Mandatory)]
+    [switch]$AppManifest,
+    [Parameter(ParameterSetName = 'BotManifest', Mandatory)]
+    [switch]$BotManifest
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+if ($PSCmdlet.ParameterSetName -eq 'UserManifest') {
+    # Emit a Slack app manifest (YAML) that a user can paste into
+    # https://api.slack.com/apps -> "Create New App" -> "From an app manifest".
+    # This pre-fills the User Token Scopes this function needs (Option C in the
+    # help). The user still installs the app and copies their own xoxp- token.
+    @'
+display_information:
+  name: Channel History Reader
+  description: Read Slack channel history for reporting via Get-SlackChannelHistory.
+oauth_config:
+  scopes:
+    user:
+      - channels:read
+      - channels:history
+      - groups:read
+      - groups:history
+      - users:read
+settings:
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false
+'@
+    return
+}
+
+if ($PSCmdlet.ParameterSetName -eq 'BotManifest') {
+    # Emit a Slack app manifest (YAML) for the bot-token (xoxb-) variant. Paste
+    # it into https://api.slack.com/apps -> "Create New App" -> "From an app
+    # manifest". This pre-fills the Bot Token Scopes this function needs and
+    # defines the bot user. After installing, copy the "Bot User OAuth Token"
+    # (xoxb-) and invite the app to each private channel it should read with
+    # "/invite @Channel History Reader".
+    @'
+display_information:
+  name: Channel History Reader
+  description: Read Slack channel history for reporting via Get-SlackChannelHistory.
+features:
+  bot_user:
+    display_name: Channel History Reader
+    always_online: false
+oauth_config:
+  scopes:
+    bot:
+      - channels:read
+      - channels:history
+      - groups:read
+      - groups:history
+      - users:read
+settings:
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false
+'@
+    return
+}
 
 if ([string]::IsNullOrWhiteSpace($Token)) {
     throw "No Slack token supplied. Pass -Token or set the SLACK_TOKEN environment variable."

@@ -1,0 +1,15 @@
+display_information:
+  name: Channel History Reader
+  description: Read Slack channel history for reporting via Get-SlackChannelHistory.
+oauth_config:
+  scopes:
+    user:
+      - channels:read
+      - channels:history
+      - groups:read
+      - groups:history
+      - users:read
+settings:
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false
