@@ -12,7 +12,7 @@
 RootModule = 'gcpstools.psm1'
 
 # Version number of this module.
-ModuleVersion = '0.1.26'
+ModuleVersion = '0.1.27'
 
 # Supported PSEditions
 CompatiblePSEditions = @('Desktop', 'Core')
