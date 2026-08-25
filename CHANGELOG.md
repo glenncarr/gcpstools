@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- `Add-SvnUnversioned`: adds unversioned files reported by SVN, with exclusion and `-WhatIf` support.
+
 ## [0.1.26] - 2026-08-21
 
 ### Added
