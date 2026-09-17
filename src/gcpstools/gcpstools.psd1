@@ -81,6 +81,7 @@ FunctionsToExport = @(
     'Get-ServerUpdateStatus'
     'Get-SlackChannelHistory'
     'Get-SvnLastRevision'
+    'Invoke-ServerUpdate'
     'Out-Diff'
     'Remove-ObjectDirectory'
     'Remove-SvnUnversioned'

@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- `Invoke-ServerUpdate`: starts the installation of available Windows updates
+  on one or more servers through a scheduled task that runs as SYSTEM on each
+  target (the Windows Update Agent refuses to install from a remote session).
+  Supports `-WhatIf`/`-Confirm`, `-Wait`, `-TimeoutMinutes`, and `-AllowReboot`.
+
+### Changed
+- `Get-ServerUpdateStatus`: also reports whether an installation is currently
+  running on a computer, through a new `Installing` property and an
+  'installing updates' status shown in cyan.
+- `Get-ServerUpdateStatus`: also reports a pending restart, through a new
+  `RebootPending` property and a 'restart pending' status shown in yellow. A
+  pending restart is reported even when the update search fails, which is a
+  common side effect of the restart being pending, and is read over CIM when
+  PowerShell remoting to the computer is unavailable.
+
 ## [0.1.28] - 2026-09-17
 
 ### Added

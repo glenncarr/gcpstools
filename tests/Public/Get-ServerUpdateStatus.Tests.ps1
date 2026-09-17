@@ -24,7 +24,13 @@ Describe 'Get-ServerUpdateStatus' {
             [PSCustomObject]@{ HotFixID = "KB-$ComputerName"; InstalledOn = [datetime]'2026-09-11' }
         }
 
-        Mock -CommandName Invoke-Command -MockWith { 0 }
+        Mock -CommandName Invoke-CimMethod -MockWith {
+            [PSCustomObject]@{ sNames = @('SomeOtherKey') }
+        }
+
+        Mock -CommandName Invoke-Command -MockWith {
+            [PSCustomObject]@{ AvailableUpdateCount = 0; Installing = $false }
+        }
     }
 
     It 'Reports only the requested servers by default' {
@@ -49,7 +55,11 @@ Describe 'Get-ServerUpdateStatus' {
         Mock -CommandName Invoke-Command -MockWith {
             param($ComputerName)
 
-            if ($ComputerName -eq 'HV01') { 0 } else { 3 }
+            if ($ComputerName -eq 'HV01') {
+                [PSCustomObject]@{ AvailableUpdateCount = 0; Installing = $false }
+            } else {
+                [PSCustomObject]@{ AvailableUpdateCount = 3; Installing = $false }
+            }
         }
 
         Get-ServerUpdateStatus -ComputerName 'HV01' -IncludeVM
@@ -96,7 +106,11 @@ Describe 'Get-ServerUpdateStatus' {
         Mock -CommandName Invoke-Command -MockWith {
             param($ComputerName)
 
-            if ($ComputerName -eq 'HV01') { 0 } else { 3 }
+            if ($ComputerName -eq 'HV01') {
+                [PSCustomObject]@{ AvailableUpdateCount = 0; Installing = $false }
+            } else {
+                [PSCustomObject]@{ AvailableUpdateCount = 3; Installing = $false }
+            }
         }
 
         Get-ServerUpdateStatus -ComputerName 'HV01' -IncludeVM
@@ -117,11 +131,91 @@ Describe 'Get-ServerUpdateStatus' {
     }
 
     It 'Reports a single available update in the singular' {
-        Mock -CommandName Invoke-Command -MockWith { 1 }
+        Mock -CommandName Invoke-Command -MockWith {
+            [PSCustomObject]@{ AvailableUpdateCount = 1; Installing = $false }
+        }
 
         Get-ServerUpdateStatus -ComputerName 'APP01'
 
         $script:written.Text | Should -Contain '  Windows Update: KB-APP01 installed 2026-09-11; 1 update available'
+    }
+
+    It 'Reports a computer that is installing updates' {
+        Mock -CommandName Invoke-Command -MockWith {
+            [PSCustomObject]@{ AvailableUpdateCount = 3; Installing = $true }
+        }
+
+        Get-ServerUpdateStatus -ComputerName 'APP01'
+
+        $line = $script:written | Where-Object Text -like '*installing updates'
+        $line.Text | Should -Be '  Windows Update: KB-APP01 installed 2026-09-11; 3 updates available; installing updates'
+        $line.Color | Should -Be 'Cyan'
+    }
+
+    It 'Reports a computer that is waiting for a restart' {
+        Mock -CommandName Invoke-Command -MockWith {
+            [PSCustomObject]@{ AvailableUpdateCount = 0; Installing = $false; RebootPending = $true }
+        }
+
+        Get-ServerUpdateStatus -ComputerName 'APP01'
+
+        $line = $script:written | Where-Object Text -like '*restart pending'
+        $line.Text | Should -Be '  Windows Update: KB-APP01 installed 2026-09-11; no updates available; restart pending'
+        $line.Color | Should -Be 'Yellow'
+    }
+
+    It 'Reports a pending restart even when the update search fails' {
+        Mock -CommandName Invoke-Command -MockWith {
+            [PSCustomObject]@{
+                AvailableUpdateCount = $null
+                Installing           = $false
+                RebootPending        = $true
+                SearchError          = 'Exception from HRESULT: 0x80240016'
+            }
+        }
+
+        $result = Get-ServerUpdateStatus -ComputerName 'APP01' -AsObject
+
+        $result.UpdateStatus | Should -Be 'KB-APP01 installed 2026-09-11; available updates unknown; restart pending'
+        $result.RebootPending | Should -BeTrue
+        $result.AvailableUpdateCount | Should -BeNullOrEmpty
+    }
+
+    It 'Falls back to CIM for the pending restart when remoting is unavailable' {
+        Mock -CommandName Invoke-Command -MockWith { throw 'WinRM cannot complete the operation' }
+        Mock -CommandName Invoke-CimMethod -MockWith {
+            param($Arguments)
+
+            if ($Arguments.sSubKeyName -like '*Component Based Servicing') {
+                [PSCustomObject]@{ sNames = @('Version', 'RebootPending') }
+            } else {
+                [PSCustomObject]@{ sNames = @() }
+            }
+        }
+
+        $result = Get-ServerUpdateStatus -ComputerName 'APP01' -AsObject
+
+        $result.RebootPending | Should -BeTrue
+        $result.UpdateStatus | Should -Be 'KB-APP01 installed 2026-09-11; available updates unknown; restart pending'
+    }
+
+    It 'Reports no pending restart when CIM can read the registry' {
+        Mock -CommandName Invoke-Command -MockWith { throw 'WinRM cannot complete the operation' }
+
+        $result = Get-ServerUpdateStatus -ComputerName 'APP01' -AsObject
+
+        $result.RebootPending | Should -BeFalse
+        $result.UpdateStatus | Should -Be 'KB-APP01 installed 2026-09-11; available updates unknown'
+    }
+
+    It 'Leaves the pending restart unknown when CIM also fails' {
+        Mock -CommandName Invoke-Command -MockWith { throw 'WinRM cannot complete the operation' }
+        Mock -CommandName Invoke-CimMethod -MockWith { throw 'Access is denied' }
+
+        $result = Get-ServerUpdateStatus -ComputerName 'APP01' -AsObject
+
+        $result.RebootPending | Should -BeNullOrEmpty
+        $result.UpdateStatus | Should -Be 'KB-APP01 installed 2026-09-11; available updates unknown'
     }
 
     It 'Reports an unknown availability without writing errors when the update search fails' {
@@ -153,7 +247,9 @@ Describe 'Get-ServerUpdateStatus' {
             [PSCustomObject]@{ Name = 'VM-A'; State = 'Running' }
             [PSCustomObject]@{ Name = 'VM-B'; State = 'Off' }
         }
-        Mock -CommandName Invoke-Command -MockWith { 2 }
+        Mock -CommandName Invoke-Command -MockWith {
+            [PSCustomObject]@{ AvailableUpdateCount = 2; Installing = $true }
+        }
 
         $result = @(Get-ServerUpdateStatus -ComputerName 'HV01' -IncludeVM -AsObject)
 
@@ -164,9 +260,11 @@ Describe 'Get-ServerUpdateStatus' {
         $result[1].LastInstalledUpdate | Should -Be 'KB-VM-A'
         $result[1].LastInstalledOn | Should -Be ([datetime]'2026-09-11')
         $result[1].AvailableUpdateCount | Should -Be 2
-        $result[1].UpdateStatus | Should -Be 'KB-VM-A installed 2026-09-11; 2 updates available'
+        $result[1].Installing | Should -BeTrue
+        $result[1].UpdateStatus | Should -Be 'KB-VM-A installed 2026-09-11; 2 updates available; installing updates'
         $result[2].UpdateStatus | Should -Be 'not running'
         $result[2].AvailableUpdateCount | Should -BeNullOrEmpty
+        $result[2].Installing | Should -BeNullOrEmpty
         $script:written.Count | Should -Be 0
     }
 

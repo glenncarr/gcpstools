@@ -25,10 +25,12 @@ Import-Module ./src/gcpstools
 
 ## Get-ServerUpdateStatus
 
-`Get-ServerUpdateStatus` reports the most recently installed Windows update and
-how many updates are still available for each computer. Computer names are
+`Get-ServerUpdateStatus` reports the most recently installed Windows update,
+how many updates are still available, whether an installation is running right
+now, and whether the computer is waiting for a restart. Computer names are
 white and VM state is colored by state; the status is green when a computer is
-current, orange when updates are available, and red when the status could not
+current, orange when updates are available, cyan while updates are being
+installed, yellow while a restart is pending, and red when the status could not
 be retrieved. Each computer is reported through a progress bar and printed as
 soon as it is checked, since the queries can take a while:
 
@@ -60,8 +62,45 @@ Get-ServerUpdateStatus -ComputerName 'HV01' -IncludeVM -AsObject |
    Where-Object AvailableUpdateCount -gt 0
 ```
 
+The `Installing` property tells you which computers are busy installing updates
+(the Windows Update Agent installer is busy, or an `Invoke-ServerUpdate` run is
+still going), and `RebootPending` which ones are waiting to be restarted:
+
+```powershell
+Get-ServerUpdateStatus -ComputerName 'APP01', 'SQL01' -AsObject |
+   Where-Object RebootPending
+```
+
 Querying a computer requires CIM access and PowerShell remoting; unreachable
 computers are reported as unavailable, and `-Verbose` shows why.
+
+## Invoke-ServerUpdate
+
+`Invoke-ServerUpdate` installs the updates that `Get-ServerUpdateStatus`
+reports. Because the Windows Update Agent refuses to install updates from a
+remote session, the install runs in a scheduled task as SYSTEM on each target
+and its result is written to `%ProgramData%\gcpstools`.
+
+```powershell
+Invoke-ServerUpdate -ComputerName 'APP01', 'SQL01'
+```
+
+The command prompts before touching each server; use `-Confirm:$false` to skip
+the prompt or `-WhatIf` to see what would happen. By default it returns as soon
+as the installation has started. Use `-Wait` to wait for the result, and
+`-AllowReboot` to let a server restart itself when the update requires it:
+
+```powershell
+Invoke-ServerUpdate -ComputerName 'APP01' -Wait -AllowReboot -Confirm:$false
+```
+
+Both commands compose, so only the servers that need updates are touched:
+
+```powershell
+Get-ServerUpdateStatus -ComputerName 'APP01', 'SQL01' -AsObject |
+   Where-Object AvailableUpdateCount -gt 0 |
+   Invoke-ServerUpdate -Wait
+```
 
 ## Get-SlackChannelHistory
 
