@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- `Get-ServerUpdateStatus`: reports the most recently installed Windows update
+  and how many updates are still available for any server, in color and with
+  progress reporting while each computer is queried. `-IncludeVM` also reports
+  the VMs of a Hyper-V host, and `-AsObject` returns one status object per
+  computer.
+
 ## [0.1.27] - 2026-08-24
 
 ### Added

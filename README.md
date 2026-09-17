@@ -23,6 +23,46 @@ Import-Module ./src/gcpstools
 ./build.ps1 -Test
 ```
 
+## Get-ServerUpdateStatus
+
+`Get-ServerUpdateStatus` reports the most recently installed Windows update and
+how many updates are still available for each computer. Computer names are
+white and VM state is colored by state; the status is green when a computer is
+current, orange when updates are available, and red when the status could not
+be retrieved. Each computer is reported through a progress bar and printed as
+soon as it is checked, since the queries can take a while:
+
+```powershell
+Get-ServerUpdateStatus -ComputerName 'APP01', 'SQL01'
+```
+
+Add `-IncludeVM` on a Hyper-V host to also report each of its VMs. Computers
+without Hyper-V are still reported:
+
+```powershell
+Get-ServerUpdateStatus -ComputerName 'HV01' -IncludeVM
+```
+
+```text
+HV01
+  Windows Update: KB5126043 installed 2026-09-17; no updates available
+  APP01 - Running
+    Windows Update: KB5126043 installed 2026-08-13; 3 updates available
+  TEST01 - Off
+    Windows Update: not running
+```
+
+Use `-AsObject` to get one object per computer (and per VM) for filtering or
+reporting:
+
+```powershell
+Get-ServerUpdateStatus -ComputerName 'HV01' -IncludeVM -AsObject |
+   Where-Object AvailableUpdateCount -gt 0
+```
+
+Querying a computer requires CIM access and PowerShell remoting; unreachable
+computers are reported as unavailable, and `-Verbose` shows why.
+
 ## Get-SlackChannelHistory
 
 `Get-SlackChannelHistory` reads messages from a Slack channel over a date range.

@@ -78,6 +78,7 @@ FunctionsToExport = @(
     'Format-DirectoryDiff'
     'Get-InternalsVisibleToAttribute'
     'Get-RecentSvnFiles'
+    'Get-ServerUpdateStatus'
     'Get-SlackChannelHistory'
     'Get-SvnLastRevision'
     'Out-Diff'
