@@ -47,6 +47,20 @@ Describe 'Get-ServerUpdateStatus' {
         Should -Invoke Get-VM -Times 0 -Exactly
     }
 
+    It 'Writes machine-specific verbose output without CIM provider chatter' {
+        Mock -CommandName Get-CimInstance -MockWith {
+            Write-Verbose 'provider noise'
+            [PSCustomObject]@{ HotFixID = 'KB5000001'; InstalledOn = [datetime]'2026-08-14' }
+        }
+
+        $verbose = @(
+            Get-ServerUpdateStatus -ComputerName 'APP01' -Verbose 4>&1 |
+                Where-Object { $_ -is [System.Management.Automation.VerboseRecord] }
+        )
+
+        $verbose.Message | Should -Be "Checking Windows update status on 'APP01'."
+    }
+
     It 'Reports VMs of a Hyper-V host with -IncludeVM' {
         Mock -CommandName Get-VM -MockWith {
             [PSCustomObject]@{ Name = 'VM-A'; State = 'Running' }

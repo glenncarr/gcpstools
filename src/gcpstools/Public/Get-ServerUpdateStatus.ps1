@@ -26,7 +26,7 @@ foreach ($key in $keys) {
         $subKeys = Invoke-CimMethod -ComputerName $ComputerName -Namespace 'root\cimv2' -ClassName 'StdRegProv' -MethodName 'EnumKey' -Arguments @{
             hDefKey     = $hklm
             sSubKeyName = $key.Path
-        } -ErrorAction Stop
+        } -ErrorAction Stop -Verbose:$false
 
         $read = $true
 
@@ -65,8 +65,10 @@ $result = [PSCustomObject]@{
     Status               = 'unavailable'
 }
 
+Write-Verbose "Checking Windows update status on '$ComputerName'."
+
 try {
-    $hotfix = Get-CimInstance -ComputerName $ComputerName -ClassName Win32_QuickFixEngineering -ErrorAction Stop |
+    $hotfix = Get-CimInstance -ComputerName $ComputerName -ClassName Win32_QuickFixEngineering -ErrorAction Stop -Verbose:$false |
         Sort-Object InstalledOn -Descending |
         Select-Object -First 1
 } catch {
@@ -84,7 +86,7 @@ if ($hotfix) {
 }
 
 try {
-    $pending = Invoke-Command -ComputerName $ComputerName -ErrorAction Stop -ScriptBlock {
+    $pending = Invoke-Command -ComputerName $ComputerName -ErrorAction Stop -Verbose:$false -ScriptBlock {
         $session = New-Object -ComObject 'Microsoft.Update.Session'
 
         $rebootPending = $false
