@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-23
+
+### Added
+- `Remove-StaleDotNetRuntime`: removes superseded .NET shared framework
+  versions (ASP.NET Core, .NET Core, and Windows Desktop, x64 and x86),
+  keeping the newest patch of each major.minor band. Supports `-WhatIf`/
+  `-Confirm`, `-Path`, `-Band`, and `-KeepVersions`, and requires an elevated
+  session to delete from the dotnet install directories.
+
 ## [0.1.30] - 2026-09-21
 
 ## [0.1.29] - 2026-09-17
