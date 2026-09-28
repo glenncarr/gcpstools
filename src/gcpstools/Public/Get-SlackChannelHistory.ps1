@@ -597,14 +597,17 @@ function Get-StandupItems {
     <#
         Parses a Slack message body into an ordered list of structured items so
         both the Markdown (terminal) and HTML (browser) renderers work from the
-        same classification. Each item is: @{ Kind; Level; Text } where Kind is
-        one of 'question', 'list', 'text', or 'blank'.
+        same classification. Each item is: @{ Kind; Level; Text; Plain; ListType }
+        where Kind is one of 'question', 'list', 'text', or 'blank'.
 
         Slack standups mix several marker styles:
           - Numbered questions ("1.") that repeat -> Kind 'question'.
-          - Lettered ("a.") / roman ("ii.") answers -> Kind 'list', label kept
-            in the text.
-          - Bullet glyphs (U+2022 '•', U+25E6 '◦', U+25AA '▪') -> Kind 'list'.
+          - Lettered ("a.") / roman ("ii.") / indented numbered ("1.") answers
+            -> Kind 'list', ListType 'alpha'/'roman'/'number'. Text keeps the
+            author's label (for Markdown); Plain drops it (for HTML <ol>,
+            which supplies its own numbering).
+          - Bullet glyphs (U+2022 '•', U+25E6 '◦', U+25AA '▪') -> Kind 'list',
+            ListType 'bullet'. Text and Plain are identical (no label).
         Nesting levels are clamped so a child is never more than one level
         deeper than its parent.
     #>
@@ -663,36 +666,46 @@ function Get-StandupItems {
         # Determine whether this line is a list item and its content/level.
         $isList = $false
         $content = $null
+        $plain = $null
+        $listType = $null
         $desiredLevel = $indentLevel
 
         if ($glyph.Success) {
             $isList = $true
             $content = $glyph.Groups['rest'].Value
+            $plain = $content
+            $listType = 'bullet'
             $g = $glyph.Groups['glyph'].Value
             if ($glyphLevel.ContainsKey([char]$g)) {
                 $desiredLevel = [math]::Max($indentLevel, $glyphLevel[[char]$g])
             }
         }
         elseif ($lettered.Success) {
-            # Keep the letter as a visible label (e.g. "a. text").
+            # Keep the letter as a visible label (e.g. "a. text") for Markdown.
             $isList = $true
             $content = "$($lettered.Groups['let'].Value)$($lettered.Groups['sep'].Value) $($lettered.Groups['rest'].Value)"
+            $plain = $lettered.Groups['rest'].Value
+            $listType = 'alpha'
         }
         elseif ($roman.Success) {
-            # Keep the roman numeral as a visible label (e.g. "ii. text").
-            # Roman numerals are always deep sub-items; when the author typed
-            # them without indentation, keep them at the current depth instead
-            # of collapsing to the top level.
+            # Keep the roman numeral as a visible label (e.g. "ii. text") for
+            # Markdown. Roman numerals are always deep sub-items; when the
+            # author typed them without indentation, keep them at the current
+            # depth instead of collapsing to the top level.
             $isList = $true
             $content = "$($roman.Groups['rom'].Value)$($roman.Groups['sep'].Value) $($roman.Groups['rest'].Value)"
+            $plain = $roman.Groups['rest'].Value
+            $listType = 'roman'
             if ($lastListLevel -ge 0) {
                 $desiredLevel = [math]::Max($indentLevel, $lastListLevel)
             }
         }
         elseif ($number.Success) {
-            # Indented numbered item: keep the number as a label.
+            # Indented numbered item: keep the number as a label for Markdown.
             $isList = $true
             $content = "$($number.Groups['num'].Value)$($number.Groups['sep'].Value) $($number.Groups['rest'].Value)"
+            $plain = $number.Groups['rest'].Value
+            $listType = 'number'
         }
 
         if ($isList) {
@@ -701,7 +714,7 @@ function Get-StandupItems {
                      else { [math]::Min($desiredLevel, $lastListLevel + 1) }
             if ($level -lt 0) { $level = 0 }
 
-            $items.Add([pscustomobject]@{ Kind = 'list'; Level = $level; Text = $content })
+            $items.Add([pscustomobject]@{ Kind = 'list'; Level = $level; Text = $content; Plain = $plain; ListType = $listType })
             $prevType = 'list'
             $lastListLevel = $level
         }
@@ -780,26 +793,51 @@ function Format-InlineHtml {
 
 function New-NestedListHtml {
     <#
-        Builds a properly nested <ul>/<li> tree from a run of list items using
-        their computed levels. Markers are suppressed via CSS so the author's
-        literal labels (a., ii., 1.) are the visible markers.
+        Builds a properly nested <ol>/<ul>/<li> tree from a run of list items
+        using their computed levels. Numbered, lettered and roman-numeral
+        items become <ol type="1"|"a"|"i"> so the browser generates the
+        numbering; bullet-glyph items become plain <ul>. Either way the
+        author's label is dropped from the visible text since the list tag
+        now supplies it.
     #>
     [CmdletBinding()]
     param([Parameter(Mandatory)][object[]]$Items)
 
+    $openTag = @{
+        alpha  = '<ol type="a">'
+        roman  = '<ol type="i">'
+        number = '<ol>'
+        bullet = '<ul>'
+    }
+    $closeTag = @{
+        alpha  = '</ol>'
+        roman  = '</ol>'
+        number = '</ol>'
+        bullet = '</ul>'
+    }
+
     $sb = [System.Text.StringBuilder]::new()
     $prevLevel = $null
+    # Close tags for each currently-open nesting level, indexed by level.
+    $openClose = [System.Collections.Generic.List[string]]::new()
 
     foreach ($it in $Items) {
         $lvl = [int]$it.Level
-        $inner = Format-InlineHtml -Text $it.Text
+        $type = $it.ListType
+        $inner = Format-InlineHtml -Text $it.Plain
 
         if ($null -eq $prevLevel) {
-            for ($k = 0; $k -le $lvl; $k++) { [void]$sb.Append('<ul>') }
+            for ($k = 0; $k -le $lvl; $k++) {
+                [void]$sb.Append($openTag[$type])
+                $openClose.Add($closeTag[$type])
+            }
             [void]$sb.Append("<li>$inner")
         }
         elseif ($lvl -gt $prevLevel) {
-            for ($k = $prevLevel; $k -lt $lvl; $k++) { [void]$sb.Append('<ul>') }
+            for ($k = $prevLevel; $k -lt $lvl; $k++) {
+                [void]$sb.Append($openTag[$type])
+                $openClose.Add($closeTag[$type])
+            }
             [void]$sb.Append("<li>$inner")
         }
         elseif ($lvl -eq $prevLevel) {
@@ -807,7 +845,10 @@ function New-NestedListHtml {
         }
         else {
             [void]$sb.Append('</li>')
-            for ($k = $prevLevel; $k -gt $lvl; $k--) { [void]$sb.Append('</ul></li>') }
+            for ($k = $prevLevel; $k -gt $lvl; $k--) {
+                [void]$sb.Append("$($openClose[$openClose.Count - 1])</li>")
+                $openClose.RemoveAt($openClose.Count - 1)
+            }
             [void]$sb.Append("<li>$inner")
         }
         $prevLevel = $lvl
@@ -815,8 +856,11 @@ function New-NestedListHtml {
 
     if ($null -ne $prevLevel) {
         [void]$sb.Append('</li>')
-        for ($k = $prevLevel; $k -gt 0; $k--) { [void]$sb.Append('</ul></li>') }
-        [void]$sb.Append('</ul>')
+        for ($k = $prevLevel; $k -gt 0; $k--) {
+            [void]$sb.Append("$($openClose[$openClose.Count - 1])</li>")
+            $openClose.RemoveAt($openClose.Count - 1)
+        }
+        [void]$sb.Append($openClose[0])
     }
 
     return $sb.ToString()
@@ -825,8 +869,9 @@ function New-NestedListHtml {
 function ConvertTo-QuotedHtml {
     <#
         Renders the parsed standup items as an HTML <blockquote> containing
-        semantic, properly nested <ul>/<li> lists (labels preserved) and <p>
-        paragraphs for questions and plain text.
+        semantic, properly nested <ol>/<ul>/<li> lists (numbered/lettered/roman
+        items use <ol>, bullet glyphs use <ul>) and <p> paragraphs for
+        questions and plain text.
     #>
     [CmdletBinding()]
     param([string]$Text)
@@ -1029,8 +1074,9 @@ if ($AsJson) {
     $entries | ConvertTo-Json -Depth 5
 }
 elseif ($UseBrowser) {
-    # Build a semantic HTML document directly (nested <ul>/<li> with the
-    # author's literal labels preserved) and open it in the default browser.
+    # Build a semantic HTML document directly (nested <ol>/<ul>/<li>, with
+    # native numbering for numbered/lettered/roman items) and open it in the
+    # default browser.
     # This bypasses the terminal-oriented Markdown intermediate so list nesting
     # is driven by our computed levels, not a Markdown parser's heuristics.
     $enc = { param($s) [System.Net.WebUtility]::HtmlEncode([string]$s) }
@@ -1069,8 +1115,7 @@ elseif ($UseBrowser) {
   h3 { margin-top: 1.5rem; }
   blockquote { border-left: 4px solid #d0d7de; margin: .4rem 0; padding: .1rem 1rem 1rem; color: #57606a; }
   blockquote p { margin: .4rem 0; }
-  /* Labels (a., ii., 1.) are kept as literal text, so hide native markers. */
-  ul { list-style: none; margin: .2rem 0; padding-left: 1.5rem; }
+  ul, ol { margin: .2rem 0; padding-left: 1.5rem; }
   code { background: #f6f8fa; padding: .1rem .3rem; border-radius: 4px; }
   a { color: #0969da; }
 </style>

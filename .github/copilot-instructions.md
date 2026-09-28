@@ -15,6 +15,16 @@
 - Preserve PowerShell 5.1 compatibility in module code.
 - Use `apply_patch` for edits and avoid unrelated formatting changes.
 
+## Documentation
+
+- Every public function in `src/gcpstools/Public/` must have a `## <FunctionName>` section
+  in the root `README.md`, in the same style as the existing sections (one-line summary,
+  then a fenced `powershell` example).
+- When adding a public function, appending a new section; when changing a function's
+  parameters or behavior, update its existing section to match.
+- Do not edit `src/gcpstools/README.md` directly; it is generated from the root `README.md`
+  during publishing.
+
 ## Server Update Commands
 
 - `Get-ServerUpdateStatus` gets installed updates through CIM and available updates through PowerShell remoting.

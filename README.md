@@ -139,3 +139,185 @@ Then, at <https://api.slack.com/apps>:
 Both switches only print text; they never contact Slack and cannot be combined
 with the history-retrieval parameters.
 
+## Add-SvnUnversioned / Remove-SvnUnversioned
+
+`Add-SvnUnversioned` runs `svn add` on every file reported as unversioned
+(`?`) by `svn status`; `Remove-SvnUnversioned` deletes them instead. Both
+accept a pipeline of paths and an `-Exclude` list of wildcard patterns, and
+both support `-WhatIf`:
+
+```powershell
+Add-SvnUnversioned -Path . -Exclude '*.log', '*.tmp'
+Remove-SvnUnversioned -Path . -Exclude '*.log', '*.tmp' -WhatIf
+```
+
+## Compare-DirectoryContentParallel
+
+`Compare-DirectoryContentParallel` hashes and compares files between a source
+and destination directory using parallel threads. Requires PowerShell 7+.
+
+```powershell
+Compare-DirectoryContentParallel -Source C:\client1\App -Destination C:\client2\App
+```
+
+Use `-FileList` to check a specific set of relative paths instead of scanning
+recursively, and `-ShowAll` (alias `-IncludeMatch`) to include files that
+already match instead of only differences.
+
+## Compare-WsdlDirectory
+
+`Compare-WsdlDirectory` compares WSDL/XSD service contracts between two
+directories and reports structural differences (messages, operations, types,
+fields). Requires PowerShell 7+.
+
+```powershell
+Compare-WsdlDirectory 'C:\client1\WCFServices' 'C:\client2\WCFServices' |
+    Where-Object Category -eq 'Field'
+```
+
+## Find-FancyQuote
+
+`Find-FancyQuote` scans files for non-ASCII quote characters (smart quotes,
+primes, guillemets) and reports the line, column, character, and an ASCII
+replacement suggestion:
+
+```powershell
+Get-ChildItem -Recurse -Filter *.xml | Find-FancyQuote -Encoding windows-1252
+```
+
+## Find-InvalidUtf8
+
+`Find-InvalidUtf8` scans files for byte sequences that are not valid UTF-8
+(per RFC 3629) and reports the offset, line, column, and a snippet of
+surrounding text:
+
+```powershell
+Get-ChildItem -Recurse -Filter *.cs | Find-InvalidUtf8
+```
+
+## Format-DirectoryDiff
+
+`Format-DirectoryDiff` applies ANSI color to directory-comparison output for
+terminal display (green = match, yellow = missing, red = mismatch, magenta =
+corruption). Requires PowerShell 7+.
+
+```powershell
+Compare-DirectoryContent -Ref C:\old -Diff C:\new | Format-DirectoryDiff
+```
+
+## Get-InternalsVisibleToAttribute
+
+`Get-InternalsVisibleToAttribute` reads a .NET assembly's
+`InternalsVisibleTo` attributes, filtered by a wildcard pattern for the
+friend assembly name:
+
+```powershell
+Get-InternalsVisibleToAttribute -Path .\MyLibrary.dll -FriendAssemblyNamePattern '*Tests*'
+```
+
+## Get-RecentSvnFiles
+
+`Get-RecentSvnFiles` lists files committed to SVN within a time window
+(added, modified, or replaced) as full local working-copy paths. Requires the
+`svn` CLI. Output pipes directly into other tools such as `Find-InvalidUtf8`:
+
+```powershell
+Get-RecentSvnFiles -Hours 72 -Path .\Public | Find-InvalidUtf8
+```
+
+## Get-SvnLastRevision
+
+`Get-SvnLastRevision` returns the SVN revision number of the most recent
+commit for a file or path. Requires the `svn` CLI.
+
+```powershell
+Get-SvnLastRevision -Path .\src\MyFile.cs
+```
+
+## Out-Diff
+
+`Out-Diff` colors and displays unified-diff-format text for visual comparison
+in the terminal (cyan = index header, green = additions, red = deletions):
+
+```powershell
+svn diff | Out-Diff
+```
+
+## Remove-ObjectDirectory
+
+`Remove-ObjectDirectory` recursively removes all `obj` build directories
+under a path. Supports `-WhatIf` and `-Confirm`:
+
+```powershell
+Remove-ObjectDirectory -Path C:\MyProject -WhatIf
+```
+
+## Remove-StaleDotNetRuntime
+
+`Remove-StaleDotNetRuntime` removes superseded .NET shared-framework
+versions, keeping the newest patch in each major.minor band. Requires an
+elevated session and supports `-WhatIf`/`-Confirm`:
+
+```powershell
+Remove-StaleDotNetRuntime -Band '8.0' -KeepVersions 2 -Confirm:$false
+```
+
+## Remove-StalePackageVersion
+
+`Remove-StalePackageVersion` removes NuGet package version directories older
+than a threshold, based on `LastWriteTime`. Supports `-WhatIf`/`-Confirm`:
+
+```powershell
+Remove-StalePackageVersion -RootPath C:\packages -OlderThanDays 30 -WhatIf
+```
+
+## Search-AppEventLog
+
+`Search-AppEventLog` searches the Windows Application event log for entries
+whose message or source matches a wildcard pattern:
+
+```powershell
+Search-AppEventLog -SearchString '*error*' -MaxEvents 500
+```
+
+## Search-SvnLog
+
+`Search-SvnLog` searches SVN commit history for a pattern in commit messages,
+with optional file filtering. Patterns are regex (case-insensitive) by
+default; use `-SimpleMatch` for a literal search:
+
+```powershell
+Search-SvnLog -Pattern 'bug fix' -IncludeFile 'SettingsService\.cs' -Limit 100
+```
+
+## Set-RegexHistorySearch
+
+`Set-RegexHistorySearch` registers a PSReadLine key handler (default
+`Ctrl+Alt+r`) that opens an interactive, regex-capable command-history
+search, deduplicated across sessions. Typically called once from your
+PowerShell profile:
+
+```powershell
+Set-RegexHistorySearch -Key 'F9'
+```
+
+## Test-AssemblyProperty
+
+`Test-AssemblyProperty` uses reflection to confirm whether one or more
+properties exist on a .NET type in an assembly, reporting the property type
+and any serialization attributes found:
+
+```powershell
+Test-AssemblyProperty $exe 'AMPServiceReference.TransmitItem' 'sequence', 'newField' |
+    Format-Table Property, Exists, Serialized
+```
+
+## Test-Xml
+
+`Test-Xml` validates an XML file against an XSD schema and reports validation
+errors with their severity and line number:
+
+```powershell
+Test-Xml -XmlPath .\document.xml -XsdUrl 'http://myserver/schema.xsd' -TargetNamespace 'urn:myorg:myschema'
+```
+
