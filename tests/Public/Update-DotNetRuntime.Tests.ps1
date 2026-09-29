@@ -1,6 +1,7 @@
 Describe 'Update-DotNetRuntime' {
     BeforeAll {
         . "$PSScriptRoot\..\..\src\gcpstools\Public\Update-DotNetRuntime.ps1"
+        . "$PSScriptRoot\..\..\src\gcpstools\Public\Remove-StaleDotNetRuntime.ps1"
     }
 
     BeforeEach {
@@ -108,5 +109,28 @@ Describe 'Update-DotNetRuntime' {
         $result.RebootRequired | Should -BeTrue
         Should -Invoke Invoke-WebRequest -Times 1 -Exactly
         Should -Invoke Start-Process -Times 1 -Exactly
+    }
+
+    It 'lets the cleanup use the .NET Uninstall Tool by default' {
+        New-Item -ItemType Directory -Path (Join-Path $TestDrive 'dotnet\shared\Microsoft.NETCore.App\8.0.2') | Out-Null
+        Mock -CommandName Remove-StaleDotNetRuntime -MockWith { }
+
+        Update-DotNetRuntime -CleanupStale -Confirm:$false
+
+        Should -Invoke Remove-StaleDotNetRuntime -ParameterFilter {
+            -not $PSBoundParameters.ContainsKey('Path') -and
+            -not $PSBoundParameters.ContainsKey('Band')
+        } -Times 1 -Exactly
+    }
+
+    It 'cleans up each framework directory when more than one version is kept' {
+        New-Item -ItemType Directory -Path (Join-Path $TestDrive 'dotnet\shared\Microsoft.NETCore.App\8.0.2') | Out-Null
+        Mock -CommandName Remove-StaleDotNetRuntime -MockWith { }
+
+        Update-DotNetRuntime -CleanupStale -KeepVersions 2 -Confirm:$false
+
+        Should -Invoke Remove-StaleDotNetRuntime -ParameterFilter {
+            $Path -and $Band -eq '8.0' -and $KeepVersions -eq 2
+        } -Times 1 -Exactly
     }
 }

@@ -262,6 +262,9 @@ the runtime installers require administrator rights:
 Update-DotNetRuntime -Band '8.0', '10.0' -CleanupStale -KeepVersions 2 -Confirm:$false
 ```
 
+`-CleanupStale` hands the cleanup to `Remove-StaleDotNetRuntime`, so it uses the
+.NET Uninstall Tool unless `-KeepVersions` is greater than 1.
+
 Preview the changes first with `-WhatIf`. To run the update against several
 servers through PowerShell remoting, make sure this module is installed on every
 target and use `Invoke-ServerCommand`:
@@ -295,6 +298,26 @@ Remove-ObjectDirectory -Path C:\MyProject -WhatIf
 `Remove-StaleDotNetRuntime` removes superseded .NET shared-framework
 versions, keeping the newest patch in each major.minor band. Requires an
 elevated session and supports `-WhatIf`/`-Confirm`:
+
+```powershell
+Remove-StaleDotNetRuntime -Confirm:$false
+```
+
+By default the removal is delegated to the
+[.NET Uninstall Tool](https://learn.microsoft.com/dotnet/core/additional-tools/uninstall-tool)
+(`dotnet-core-uninstall --all-lower-patches`), which uninstalls each version
+through its original installer instead of deleting files, and keeps versions
+that Visual Studio may need. The tool is installed with winget when it is
+missing. Add `-IncludeSdk` to also remove superseded SDKs:
+
+```powershell
+Remove-StaleDotNetRuntime -IncludeSdk -Confirm:$false
+```
+
+The tool's filter options are mutually exclusive, so it cannot express every
+request. The original file-system removal is used instead when `-Path` or
+`-Band` is given, when `-KeepVersions` is greater than 1, or when the tool is
+unavailable or fails:
 
 ```powershell
 Remove-StaleDotNetRuntime -Band '8.0' -KeepVersions 2 -Confirm:$false

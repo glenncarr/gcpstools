@@ -22,10 +22,13 @@ function Update-DotNetRuntime {
         security updates.
 
     .PARAMETER CleanupStale
-        Removes superseded patch versions from successfully processed bands.
+        Removes superseded patch versions from successfully processed bands with
+        Remove-StaleDotNetRuntime, which uses the .NET Uninstall Tool when it can.
 
     .PARAMETER KeepVersions
         The number of newest patch versions to retain when -CleanupStale is used.
+        A value greater than 1 cannot be expressed by the .NET Uninstall Tool, so
+        the superseded directories are removed instead.
 
     .PARAMETER DownloadPath
         Directory used for temporary runtime installers.
@@ -285,13 +288,24 @@ function Update-DotNetRuntime {
         }
     }
 
-    if ($CleanupStale) {
-        foreach ($target in ($cleanupTargets | Select-Object FrameworkPath, Version -Unique)) {
+    if ($CleanupStale -and $cleanupTargets.Count -gt 0) {
+        # Passing no path or band keeps the default that Remove-StaleDotNetRuntime can hand to the .NET Uninstall Tool.
+        if ($KeepVersions -eq 1) {
             try {
-                Remove-StaleDotNetRuntime -Path $target.FrameworkPath -Band $target.Version.Band -KeepVersions $KeepVersions -Confirm:$false | Out-Null
+                Remove-StaleDotNetRuntime -Confirm:$false | Out-Null
             }
             catch {
-                Write-Warning "Failed to remove stale .NET runtime versions from $($target.FrameworkPath): $($_.Exception.Message)"
+                Write-Warning "Failed to remove stale .NET runtime versions: $($_.Exception.Message)"
+            }
+        }
+        else {
+            foreach ($target in ($cleanupTargets | Select-Object FrameworkPath, Version -Unique)) {
+                try {
+                    Remove-StaleDotNetRuntime -Path $target.FrameworkPath -Band $target.Version.Band -KeepVersions $KeepVersions -Confirm:$false | Out-Null
+                }
+                catch {
+                    Write-Warning "Failed to remove stale .NET runtime versions from $($target.FrameworkPath): $($_.Exception.Message)"
+                }
             }
         }
     }

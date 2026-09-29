@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.2.5] - 2026-09-29
+
+### Changed
+- `Remove-StaleDotNetRuntime`: removes superseded versions with the .NET
+  Uninstall Tool (`dotnet-core-uninstall --all-lower-patches`) by default,
+  installing it with winget when missing, and falls back to the previous
+  file-system removal when `-Path` or `-Band` is used, when `-KeepVersions`
+  is greater than 1, or when the tool is unavailable or fails. Adds
+  `-IncludeSdk` to also remove superseded SDKs.
+- `Update-DotNetRuntime`: `-CleanupStale` now delegates to
+  `Remove-StaleDotNetRuntime` without a path or band filter, so the cleanup uses
+  the .NET Uninstall Tool unless `-KeepVersions` is greater than 1.
+
 ## [0.2.4] - 2026-09-29
 
 ## [0.2.3] - 2026-09-29

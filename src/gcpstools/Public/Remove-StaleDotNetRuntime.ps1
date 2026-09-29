@@ -10,6 +10,17 @@ function Remove-StaleDotNetRuntime {
         version that has been superseded by a newer patch within the same
         major.minor band. The newest version of each band is always kept.
 
+        By default the removal is delegated to the .NET Uninstall Tool
+        (dotnet-core-uninstall --all-lower-patches), which uninstalls each
+        version through its original installer instead of deleting files. When
+        the tool is missing it is installed with winget. The tool keeps versions
+        that Visual Studio may require.
+
+        The tool's filter options are mutually exclusive, so it cannot express
+        every request. The original file-system removal is used instead when
+        -Path or -Band is specified, when -KeepVersions is greater than 1, when
+        the tool is unavailable, or when the tool fails.
+
         Prerelease versions are ranked below the matching stable release, so a
         stable 8.0.11 supersedes 8.0.11-preview.1.
 
@@ -19,15 +30,21 @@ function Remove-StaleDotNetRuntime {
     .PARAMETER Path
         One or more shared framework directories to evaluate (the folder that
         contains the version subdirectories). Defaults to every framework found
-        under the 64-bit and 32-bit dotnet installations.
+        under the 64-bit and 32-bit dotnet installations. Specifying this
+        parameter forces the file-system removal.
 
     .PARAMETER Band
         Limits processing to the specified major.minor bands, for example
-        '6.0' or '8.0'. By default all bands are evaluated.
+        '6.0' or '8.0'. By default all bands are evaluated. Specifying this
+        parameter forces the file-system removal.
 
     .PARAMETER KeepVersions
         The number of most recent versions to keep in each major.minor band.
-        Defaults to 1.
+        Defaults to 1. A value greater than 1 forces the file-system removal.
+
+    .PARAMETER IncludeSdk
+        Also removes superseded .NET SDKs. Only the .NET Uninstall Tool can
+        remove SDKs; the file-system fallback ignores them.
 
     .EXAMPLE
         Remove-StaleDotNetRuntime -WhatIf
@@ -38,6 +55,11 @@ function Remove-StaleDotNetRuntime {
         Remove-StaleDotNetRuntime -Confirm:$false
 
         Removes every superseded shared framework version without prompting.
+
+    .EXAMPLE
+        Remove-StaleDotNetRuntime -IncludeSdk -Confirm:$false
+
+        Also removes the SDKs that have been superseded by a higher patch.
 
     .EXAMPLE
         Remove-StaleDotNetRuntime -Band '6.0', '8.0' -KeepVersions 2
@@ -58,7 +80,9 @@ function Remove-StaleDotNetRuntime {
         [string[]]$Band,
 
         [ValidateRange(1, 1000)]
-        [int]$KeepVersions = 1
+        [int]$KeepVersions = 1,
+
+        [switch]$IncludeSdk
     )
 
     begin {
@@ -84,6 +108,75 @@ function Remove-StaleDotNetRuntime {
             }
         }
 
+        function Get-SharedFrameworkVersion {
+            foreach ($frameworkPath in (Get-DefaultSharedPath)) {
+                Get-ChildItem -LiteralPath $frameworkPath -Directory -ErrorAction SilentlyContinue
+            }
+        }
+
+        function Get-UninstallToolPath {
+            $command = Get-Command 'dotnet-core-uninstall' -CommandType Application -ErrorAction SilentlyContinue |
+                Select-Object -First 1
+            if ($command) {
+                return $command.Source
+            }
+
+            foreach ($root in @(${env:ProgramFiles(x86)}, $env:ProgramFiles)) {
+                if (-not $root) { continue }
+
+                $candidate = Join-Path $root 'dotnet-core-uninstall\dotnet-core-uninstall.exe'
+                if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+                    return $candidate
+                }
+            }
+        }
+
+        function Install-UninstallTool {
+            if (-not (Get-Command 'winget' -CommandType Application -ErrorAction SilentlyContinue)) {
+                Write-Verbose 'winget was not found; the .NET Uninstall Tool cannot be installed automatically.'
+                return
+            }
+
+            if (-not $PSCmdlet.ShouldProcess('Microsoft.DotNet.UninstallTool', 'Install the .NET Uninstall Tool with winget')) {
+                return
+            }
+
+            Write-Verbose 'Installing the .NET Uninstall Tool with winget.'
+            & winget install --id Microsoft.DotNet.UninstallTool --source winget --accept-package-agreements --accept-source-agreements 2>&1 |
+                ForEach-Object { Write-Verbose "$_" }
+
+            if ($LASTEXITCODE -ne 0) {
+                Write-Verbose "winget exited with code $LASTEXITCODE."
+                return
+            }
+
+            Get-UninstallToolPath
+        }
+
+        function Invoke-UninstallTool {
+            param(
+                [string]$ToolPath,
+                [string]$Target
+            )
+
+            if ($WhatIfPreference) {
+                $arguments = @('dry-run', '--all-lower-patches', $Target)
+            }
+            elseif ($PSCmdlet.ShouldProcess("$Target superseded versions", 'Remove with the .NET Uninstall Tool')) {
+                $arguments = @('remove', '--all-lower-patches', $Target, '--yes')
+            }
+            else {
+                return
+            }
+
+            Write-Verbose "Running: `"$ToolPath`" $($arguments -join ' ')"
+            & $ToolPath @arguments 2>&1 | ForEach-Object { Write-Verbose "$_" }
+
+            if ($LASTEXITCODE -ne 0) {
+                throw "'$ToolPath $($arguments -join ' ')' exited with code $LASTEXITCODE."
+            }
+        }
+
         if (-not $WhatIfPreference -and -not (Test-Elevated)) {
             Write-Warning 'Not running elevated; removing a .NET shared framework requires administrator rights and will likely fail with access denied.'
         }
@@ -98,6 +191,44 @@ function Remove-StaleDotNetRuntime {
     }
 
     end {
+        # The tool's filter options are exclusive, so it can only express the default request.
+        if ($resolvedPaths.Count -eq 0 -and -not $Band -and $KeepVersions -eq 1) {
+            $toolPath = Get-UninstallToolPath
+            if (-not $toolPath) {
+                $toolPath = Install-UninstallTool
+            }
+
+            if ($toolPath) {
+                $targets = @('--runtime', '--aspnet-runtime', '--windows-desktop-runtime')
+                if ($IncludeSdk) { $targets += '--sdk' }
+
+                $before = @(Get-SharedFrameworkVersion)
+
+                try {
+                    foreach ($target in $targets) {
+                        Invoke-UninstallTool -ToolPath $toolPath -Target $target
+                    }
+
+                    if (-not $WhatIfPreference) {
+                        $remaining = @(Get-SharedFrameworkVersion).FullName
+                        $before | Where-Object { $_.FullName -notin $remaining }
+                    }
+
+                    return
+                }
+                catch {
+                    Write-Warning "The .NET Uninstall Tool did not complete: $($_.Exception.Message) Falling back to removing the directories."
+                }
+            }
+            else {
+                Write-Verbose 'The .NET Uninstall Tool is not available; falling back to removing the directories.'
+            }
+        }
+
+        if ($IncludeSdk) {
+            Write-Warning 'Only the .NET Uninstall Tool can remove SDKs; the fallback removal skips them.'
+        }
+
         if ($resolvedPaths.Count -eq 0) {
             $discovered = Get-DefaultSharedPath
             foreach ($item in $discovered) { $resolvedPaths.Add($item) }
