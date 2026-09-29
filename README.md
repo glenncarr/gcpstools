@@ -102,6 +102,22 @@ Get-ServerUpdateStatus -ComputerName 'APP01', 'SQL01' -AsObject |
    Invoke-ServerUpdate -Wait
 ```
 
+## Invoke-ServerCommand
+
+`Invoke-ServerCommand` opens a PowerShell remoting session for each server,
+executes the same script block, returns its output, and closes the session.
+Pipe computer names to the command or provide them with `-ComputerName`:
+
+```powershell
+'SERVER01', 'SERVER02', 'SERVER03', 'SERVER04' |
+   Invoke-ServerCommand -ScriptBlock {
+      Remove-StaleDotNetRuntime -WhatIf -Verbose
+   }
+```
+
+Use `-ArgumentList` for values consumed by parameters in the script block, and
+use `-WhatIf` to skip remote execution.
+
 ## Get-SlackChannelHistory
 
 `Get-SlackChannelHistory` reads messages from a Slack channel over a date range.

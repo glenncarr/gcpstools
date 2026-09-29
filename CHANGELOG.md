@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-09-28
+
+### Added
+- `Invoke-ServerCommand`: executes a script block on one or more servers over
+  PowerShell remoting, with pipeline input, argument forwarding, session
+  cleanup, and `-WhatIf` support.
+
 ## [0.2.1] - 2026-09-28
 
 ## [0.2.0] - 2026-09-23
