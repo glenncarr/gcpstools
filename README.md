@@ -250,6 +250,28 @@ commit for a file or path. Requires the `svn` CLI.
 Get-SvnLastRevision -Path .\src\MyFile.cs
 ```
 
+## Update-DotNetRuntime
+
+`Update-DotNetRuntime` updates installed .NET shared frameworks to the latest
+patch for each installed major/minor band. It uses Microsoft's release metadata,
+verifies each installer download with the published SHA-512 hash, and skips
+end-of-life channels unless `-IncludeEol` is specified. Run it elevated because
+the runtime installers require administrator rights:
+
+```powershell
+Update-DotNetRuntime -Band '8.0', '10.0' -CleanupStale -KeepVersions 2 -Confirm:$false
+```
+
+Preview the changes first with `-WhatIf`. To run the update against several
+servers through PowerShell remoting, make sure this module is installed on every
+target and use `Invoke-ServerCommand`:
+
+```powershell
+'APP01', 'SQL01' | Invoke-ServerCommand -ScriptBlock {
+   Update-DotNetRuntime -WhatIf -Verbose
+}
+```
+
 ## Out-Diff
 
 `Out-Diff` colors and displays unified-diff-format text for visual comparison
