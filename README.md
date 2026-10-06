@@ -201,6 +201,20 @@ replacement suggestion:
 Get-ChildItem -Recurse -Filter *.xml | Find-FancyQuote -Encoding windows-1252
 ```
 
+## Find-AssemblyRevision
+
+`Find-AssemblyRevision` searches committed SVN snapshots of `version.xml` for
+the most recent interval in which an assembly had a specified revision value.
+It reports when the value was set, when it changed again, and the patch value
+from the matching snapshot. Requires the `svn` CLI and repository access.
+
+```powershell
+Find-AssemblyRevision -Path .\version.xml -AssemblyName 'Example.Assembly' -RevisionValue 1
+```
+
+`-Path` can also be an HTTP/HTTPS SVN repository URL. Use `-SvnPath` to select
+a specific SVN executable, and `-Verbose` to see the history search progress.
+
 ## Find-InvalidUtf8
 
 `Find-InvalidUtf8` scans files for byte sequences that are not valid UTF-8
