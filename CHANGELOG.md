@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.2.7] - 2026-10-06
+
+### Added
+- `Find-AssemblyRevision`: displays progress while checking SVN snapshots and
+  clears it when the search completes or fails.
+
 ## [0.2.6] - 2026-10-06
 
 ### Added

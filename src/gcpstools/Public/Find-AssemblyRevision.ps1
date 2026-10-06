@@ -86,54 +86,61 @@ function Find-AssemblyRevision {
 	$done = $false
 	$upperBound = 'HEAD'
 
-	while (-not $done -and $null -ne $upperBound) {
-		Write-Verbose "Fetching up to $ChunkSize history entries from SVN revision $upperBound downward."
-		$log = Invoke-SvnXml -Arguments @('log', '--xml', '--non-interactive', '-r', "${upperBound}:0", '--limit', [string] $ChunkSize, '--', $target)
-		$entries = @($log.log.logentry | Where-Object { $null -ne $_ })
-		if ($entries.Count -eq 0) {
-			break
-		}
-
-		foreach ($entry in $entries) {
-			$checkedCount++
-			Write-Verbose "Checking entry $checkedCount : SVN revision $($entry.revision) ($($entry.date))."
-			$snapshot = Invoke-SvnXml -Arguments @('cat', '--non-interactive', '-r', [string] $entry.revision, '--', $target)
-			$assembly = $snapshot.versions.assemblies.assembly |
-				Where-Object { $_.GetAttribute('name') -ceq $AssemblyName } |
-				Select-Object -First 1
-			$revision = if ($null -ne $assembly) { $assembly.SelectSingleNode('revision') } else { $null }
-			$matches = $null -ne $revision -and $revision.InnerText.Trim() -ceq [string] $RevisionValue
-
-			if ($null -eq $revision) {
-				Write-Verbose "No revision element found for '$AssemblyName' in this snapshot."
-			}
-			else {
-				Write-Verbose "Assembly revision value: $($revision.InnerText.Trim()); patch: $($revision.GetAttribute('patch'))."
-			}
-
-			if ($matches) {
-				Write-Verbose "Match found in SVN revision $($entry.revision)."
-				if ($null -eq $lastMatch) {
-					$lastMatch = $entry
-					$changedAway = $newerEntry
-				}
-				$firstMatch = $entry
-				$patch = $revision.GetAttribute('patch')
-			}
-			elseif ($null -ne $firstMatch) {
-				Write-Verbose "Reached the preceding value in SVN revision $($entry.revision); the matching interval starts at SVN revision $($firstMatch.revision)."
-				$done = $true
+	try {
+		while (-not $done -and $null -ne $upperBound) {
+			Write-Verbose "Fetching up to $ChunkSize history entries from SVN revision $upperBound downward."
+			$log = Invoke-SvnXml -Arguments @('log', '--xml', '--non-interactive', '-r', "${upperBound}:0", '--limit', [string] $ChunkSize, '--', $target)
+			$entries = @($log.log.logentry | Where-Object { $null -ne $_ })
+			if ($entries.Count -eq 0) {
 				break
 			}
-			$newerEntry = $entry
-		}
 
-		if ($done -or $entries.Count -lt $ChunkSize) {
-			break
-		}
+			foreach ($entry in $entries) {
+				$checkedCount++
+				Write-Progress -Id 1 -Activity 'Searching SVN assembly revision history' `
+					-Status "Checked $checkedCount entries; current SVN revision $($entry.revision)"
+				Write-Verbose "Checking entry $checkedCount : SVN revision $($entry.revision) ($($entry.date))."
+				$snapshot = Invoke-SvnXml -Arguments @('cat', '--non-interactive', '-r', [string] $entry.revision, '--', $target)
+				$assembly = $snapshot.versions.assemblies.assembly |
+					Where-Object { $_.GetAttribute('name') -ceq $AssemblyName } |
+					Select-Object -First 1
+				$revision = if ($null -ne $assembly) { $assembly.SelectSingleNode('revision') } else { $null }
+				$matches = $null -ne $revision -and $revision.InnerText.Trim() -ceq [string] $RevisionValue
 
-		$oldestRevision = [long] $entries[-1].revision
-		$upperBound = if ($oldestRevision -gt 0) { [string] ($oldestRevision - 1) } else { $null }
+				if ($null -eq $revision) {
+					Write-Verbose "No revision element found for '$AssemblyName' in this snapshot."
+				}
+				else {
+					Write-Verbose "Assembly revision value: $($revision.InnerText.Trim()); patch: $($revision.GetAttribute('patch'))."
+				}
+
+				if ($matches) {
+					Write-Verbose "Match found in SVN revision $($entry.revision)."
+					if ($null -eq $lastMatch) {
+						$lastMatch = $entry
+						$changedAway = $newerEntry
+					}
+					$firstMatch = $entry
+					$patch = $revision.GetAttribute('patch')
+				}
+				elseif ($null -ne $firstMatch) {
+					Write-Verbose "Reached the preceding value in SVN revision $($entry.revision); the matching interval starts at SVN revision $($firstMatch.revision)."
+					$done = $true
+					break
+				}
+				$newerEntry = $entry
+			}
+
+			if ($done -or $entries.Count -lt $ChunkSize) {
+				break
+			}
+
+			$oldestRevision = [long] $entries[-1].revision
+			$upperBound = if ($oldestRevision -gt 0) { [string] ($oldestRevision - 1) } else { $null }
+		}
+	}
+	finally {
+		Write-Progress -Id 1 -Activity 'Searching SVN assembly revision history' -Completed
 	}
 
 	Write-Verbose "Search complete. Checked $checkedCount history entries."
