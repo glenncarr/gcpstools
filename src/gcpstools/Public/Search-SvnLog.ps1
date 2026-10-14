@@ -41,6 +41,12 @@
 .PARAMETER Last
     Display only the last N matching revisions (newest).
 
+.PARAMETER ShowPaths
+    Includes changed paths in the output. This is the default; retained for compatibility.
+
+.PARAMETER HidePaths
+    Omits changed paths and their labels from the output. Takes precedence over -ShowPaths.
+
 .PARAMETER UseColor
     When specified, displays results using colored host output or Spectre panels
     instead of emitting plain-text output to the pipeline.
@@ -95,7 +101,10 @@ param(
     [switch] $Descending,
 
     [Parameter()]
-    [switch] $ShowPaths,
+    [switch] $ShowPaths = $true,
+
+    [Parameter()]
+    [switch] $HidePaths,
 
     [Parameter()]
     [ValidateRange(1, [int]::MaxValue)]
@@ -118,6 +127,7 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+$showPaths = $ShowPaths -and -not $HidePaths
 
 # --- Color palette for patterns ------------------------------------------------
 $colorPalette = @(
@@ -319,10 +329,10 @@ function Format-PlainSvnEntry {
     $header
 
     $msg = ($(if ($Entry.msg) { $Entry.msg } else { '' }) -replace '\r', '').TrimEnd()
-    if ($ShowPaths) { 'Message:' }
+    if ($showPaths) { 'Message:' }
     foreach ($line in ($msg -split '\n')) { "  $line" }
 
-    if ($ShowPaths) {
+    if ($showPaths) {
         $paths = if ($Entry.paths) { $Entry.paths.path } else { $null }
         if ($paths) {
             'Paths:'
@@ -416,7 +426,7 @@ foreach ($result in $results) {
     }
 
     # Changed paths
-    if ($ShowPaths) {
+    if ($showPaths) {
     $paths = if ($entry.paths) { $entry.paths.path } else { $null }
     if ($paths) {
         if ($hasSpectre) {
