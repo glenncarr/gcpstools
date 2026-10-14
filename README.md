@@ -359,10 +359,12 @@ Search-AppEventLog -SearchString '*error*' -MaxEvents 500
 
 `Search-SvnLog` searches SVN commit history for a pattern in commit messages,
 with optional file filtering. Patterns are regex (case-insensitive) by
-default; use `-SimpleMatch` for a literal search:
+default; use `-SimpleMatch` for a literal search. Results are plain text by
+default; use `-UseColor` for colored output:
 
 ```powershell
 Search-SvnLog -Pattern 'bug fix' -IncludeFile 'SettingsService\.cs' -Limit 100
+Search-SvnLog -Pattern 'bug fix' -UseColor
 ```
 
 ## Set-RegexHistorySearch

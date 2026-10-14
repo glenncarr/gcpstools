@@ -35,31 +35,43 @@ Describe 'Search-SvnLog' {
         }
     }
 
-    It 'returns plain-text output containing the revision and message' {
-        $out = Search-SvnLog -Path 'C:\repo' -Pattern 'fix' -PlainText
+    It 'returns plain-text output by default containing the revision and message' {
+        $out = Search-SvnLog -Path 'C:\repo' -Pattern 'fix'
         ($out -join "`n") | Should -Match 'r101'
         ($out -join "`n") | Should -Match 'fix null reference in parser'
     }
 
     It 'omits the "Message:" label in plain-text output' {
-        $out = Search-SvnLog -Path 'C:\repo' -Pattern 'fix' -PlainText
+        $out = Search-SvnLog -Path 'C:\repo' -Pattern 'fix'
         $out | Should -Not -Contain 'Message:'
         ($out -join "`n") | Should -Not -Match 'Message:'
     }
 
     It 'produces no ANSI escape sequences in plain-text output' {
-        $out = Search-SvnLog -Path 'C:\repo' -Pattern 'fix' -PlainText
+        $out = Search-SvnLog -Path 'C:\repo' -Pattern 'fix'
         ($out -join "`n") | Should -Not -Match ([char]27)
     }
 
+    It 'uses colored host output when -UseColor is specified' {
+        if ($PSVersionTable.PSVersion.Major -ge 7) {
+            Mock Get-Module { [pscustomobject]@{ Name = 'PwshSpectreConsole' } } -ParameterFilter { $ListAvailable -and $Name -eq 'PwshSpectreConsole' }
+            Mock Import-Module {}
+            Mock Get-Command { $null } -ParameterFilter { $Name -eq 'Format-SpectrePanel' }
+        }
+
+        $out = Search-SvnLog -Path 'C:\repo' -Pattern 'fix' -UseColor 6>&1
+        ($out | Out-String) | Should -Match 'Fetching SVN log for:'
+        ($out | Out-String) | Should -Match 'Total matches: 1'
+    }
+
     It 'filters commits by pattern' {
-        $out = Search-SvnLog -Path 'C:\repo' -Pattern 'new feature' -PlainText
+        $out = Search-SvnLog -Path 'C:\repo' -Pattern 'new feature'
         ($out -join "`n") | Should -Match 'r102'
         ($out -join "`n") | Should -Not -Match 'r101'
     }
 
     It 'includes changed paths after the message and adds the label only with -ShowPaths' {
-        $withPaths = Search-SvnLog -Path 'C:\repo' -Pattern 'fix' -ShowPaths -PlainText
+        $withPaths = Search-SvnLog -Path 'C:\repo' -Pattern 'fix' -ShowPaths
         $joined = $withPaths -join "`n"
         $joined | Should -Match 'Message:'
         $joined | Should -Match 'Paths:'
@@ -67,13 +79,22 @@ Describe 'Search-SvnLog' {
         # Paths must appear after the message
         $joined.IndexOf('Message:') | Should -BeLessThan $joined.IndexOf('Paths:')
 
-        $withoutPaths = Search-SvnLog -Path 'C:\repo' -Pattern 'fix' -PlainText
+        $withoutPaths = Search-SvnLog -Path 'C:\repo' -Pattern 'fix'
         ($withoutPaths -join "`n") | Should -Not -Match 'Paths:'
         ($withoutPaths -join "`n") | Should -Not -Match 'Message:'
     }
 
     It 'returns no matching revisions for a non-matching pattern' {
-        $out = Search-SvnLog -Path 'C:\repo' -Pattern 'ZZZ_NO_MATCH' -PlainText
+        $out = Search-SvnLog -Path 'C:\repo' -Pattern 'ZZZ_NO_MATCH'
         ($out -join "`n") | Should -Not -Match 'r10'
+        $out | Should -Contain 'No commits found matching the specified criteria.'
+    }
+
+    It 'returns a plain-text message when the log is empty' {
+        $script:sampleXml = '<log />'
+
+        $out = Search-SvnLog -Path 'C:\repo' -Pattern 'fix'
+
+        $out | Should -Contain 'No log entries found.'
     }
 }

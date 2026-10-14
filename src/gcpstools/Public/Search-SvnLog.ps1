@@ -41,9 +41,9 @@
 .PARAMETER Last
     Display only the last N matching revisions (newest).
 
-.PARAMETER PlainText
-    When specified, emits uncolored plain-text output to the pipeline (no ANSI
-    colors or Spectre panels), making it easy to copy or redirect to a file.
+.PARAMETER UseColor
+    When specified, displays results using colored host output or Spectre panels
+    instead of emitting plain-text output to the pipeline.
 
 .PARAMETER Clipboard
     Copies the plain-text rendering of the results to the clipboard while still
@@ -65,7 +65,10 @@
     Search-SvnLog.ps1 -Pattern "bug 1234","bug 5678" -SimpleMatch
 
 .EXAMPLE
-    Search-SvnLog.ps1 -Pattern "deploy" -PlainText | Set-Clipboard
+    Search-SvnLog.ps1 -Pattern "deploy" | Set-Clipboard
+
+.EXAMPLE
+    Search-SvnLog.ps1 -Pattern "deploy" -UseColor
 #>
 [CmdletBinding()]
 param(
@@ -103,7 +106,7 @@ param(
     [int] $Last,
 
     [Parameter()]
-    [switch] $PlainText,
+    [switch] $UseColor,
 
     [Parameter()]
     [switch] $Clipboard,
@@ -129,7 +132,7 @@ $colorPalette = @(
 
 # --- Check for PwshSpectreConsole module (PowerShell 7+ only) -------------------
 $hasSpectre = $false
-if (-not $PlainText -and $PSVersionTable.PSVersion.Major -ge 7) {
+if ($UseColor -and $PSVersionTable.PSVersion.Major -ge 7) {
     $hasSpectre = $null -ne (Get-Module -ListAvailable -Name PwshSpectreConsole)
     if (-not $hasSpectre) {
         Write-Host "PwshSpectreConsole module not found. Install it for enhanced output?" -ForegroundColor Yellow
@@ -174,7 +177,7 @@ if ($Limit -gt 0) {
     $svnArgs += '--limit', $Limit
 }
 
-if (-not $PlainText) {
+if ($UseColor) {
     Write-Host "Fetching SVN log for: $Path" -ForegroundColor Cyan
     if ($Limit -gt 0) {
         Write-Host "  (limited to last $Limit entries)" -ForegroundColor DarkGray
@@ -208,9 +211,13 @@ if ($LASTEXITCODE -ne 0) {
 
 [xml]$logXml = $rawXml | Out-String
 
-$entries = $logXml.log.logentry
+$entries = @($logXml.SelectNodes('/log/logentry'))
 if (-not $entries) {
-    Write-Host "No log entries found." -ForegroundColor Yellow
+    if ($UseColor) {
+        Write-Host "No log entries found." -ForegroundColor Yellow
+    } else {
+        Write-Output "No log entries found."
+    }
     return
 }
 
@@ -260,11 +267,15 @@ foreach ($entry in $entries) {
 }
 
 if ($results.Count -eq 0) {
-    Write-Host "No commits found matching the specified criteria." -ForegroundColor Yellow
+    if ($UseColor) {
+        Write-Host "No commits found matching the specified criteria." -ForegroundColor Yellow
+    } else {
+        Write-Output "No commits found matching the specified criteria."
+    }
     return
 }
 
-if (-not $PlainText) {
+if ($UseColor) {
     Write-Host "Found $($results.Count) matching commit(s)" -ForegroundColor Green
     Write-Host ''
 }
@@ -293,7 +304,7 @@ if ($Last) {
 # --- Display results -----------------------------------------------------------
 $displayCount = 0
 
-# Build the plain-text lines for a single log entry (shared by -PlainText and -Clipboard).
+# Build the plain-text lines for a single log entry (shared by default output and -Clipboard).
 function Format-PlainSvnEntry {
     param($Entry, [int]$PatternIndex)
 
@@ -332,7 +343,7 @@ foreach ($result in $results) {
     $color = $colorPalette[$result.PatternIndex % $colorPalette.Count]
 
     # --- Plain-text output (copy-friendly, no colors) --------------------------
-    if ($PlainText) {
+    if (-not $UseColor) {
         if ($displayCount -gt 0) {
             Write-Output ('-' * 60)
         }
@@ -480,7 +491,7 @@ foreach ($result in $results) {
     }
 }
 
-if (-not $PlainText) {
+if ($UseColor) {
     Write-Host "Total matches: $($results.Count)" -ForegroundColor Green
     Write-Host ''
 }
