@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-15
+
+### Added
+- `Search-SvnLog`: queries repository `HEAD` without updating the working copy
+  and warns when the working copy is out of date. Plain-text output and changed
+  paths are now the defaults; `-UseColor` and `-HidePaths` opt out of them.
+- `ssl`: alias for `Search-SvnLog`, exported when the module is imported.
+
 ## [0.2.7] - 2026-10-06
 
 ### Added

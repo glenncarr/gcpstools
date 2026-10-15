@@ -4,10 +4,10 @@
     Searches SVN log history for one or more patterns in commit messages.
 
 .DESCRIPTION
-    Runs svn log from the current (or specified) working directory, parses the
-    structured XML output, and displays full details for every commit whose
-    message matches any of the given patterns. Each pattern's matches are
-    displayed in a distinct color.
+    Queries svn log through repository HEAD without updating the working copy,
+    parses the structured XML output, and displays full details for every commit
+    whose message matches any of the given patterns. An informational message is
+    shown when the working copy is behind the repository.
 
 .PARAMETER Pattern
     One or more patterns to match against SVN commit messages.
@@ -181,8 +181,22 @@ if ($Pattern) {
     }
 }
 
+# --- Check whether the working copy is behind the repository ------------------
+$statusArgs = @('status', '--show-updates', '--xml', $Path)
+$statusOutput = svn @statusArgs 2>&1
+$workingCopyIsOutOfDate = $false
+if ($LASTEXITCODE -eq 0) {
+    [xml]$statusXml = $statusOutput | Out-String
+    $workingCopyIsOutOfDate = $statusXml.SelectNodes('/status/target/entry/repos-status').Count -gt 0
+}
+
+if ($workingCopyIsOutOfDate) {
+    $message = "Working copy '$Path' is out of date. The log is fetched through repository HEAD; the working copy was not updated."
+    Write-Warning $message
+}
+
 # --- Build svn arguments -------------------------------------------------------
-$svnArgs = @('log', '--xml', '--verbose', $Path)
+$svnArgs = @('log', '--xml', '--verbose', '--revision', 'HEAD:1', $Path)
 if ($Limit -gt 0) {
     $svnArgs += '--limit', $Limit
 }

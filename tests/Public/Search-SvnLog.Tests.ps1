@@ -26,12 +26,23 @@ Describe 'Search-SvnLog' {
 </logentry>
 </log>
 '@
+        $script:upToDateStatusXml = '<status><target path="C:\repo" /></status>'
+        $script:staleStatusXml = '<status><target path="C:\repo"><entry path="C:\repo\App.cs"><wc-status item="normal" props="none" revision="1" /><repos-status item="modified" props="none" /></entry></target></status>'
     }
 
     BeforeEach {
+        $script:statusXml = $script:upToDateStatusXml
+        $script:statusArgs = @()
+        $script:logArgs = @()
         Mock svn {
             $global:LASTEXITCODE = 0
-            $script:sampleXml
+            if ($args[0] -eq 'status') {
+                $script:statusArgs = @($args)
+                $script:statusXml
+            } else {
+                $script:logArgs = @($args)
+                $script:sampleXml
+            }
         }
     }
 
@@ -39,6 +50,21 @@ Describe 'Search-SvnLog' {
         $out = Search-SvnLog -Path 'C:\repo' -Pattern 'fix'
         ($out -join "`n") | Should -Match 'r101'
         ($out -join "`n") | Should -Match 'fix null reference in parser'
+    }
+
+    It 'queries repository HEAD and reports when the working copy is out of date' {
+        $script:statusXml = $script:staleStatusXml
+        $warningMessages = @()
+
+        $out = Search-SvnLog -Path 'C:\repo' -Pattern 'fix' -WarningVariable warningMessages
+
+        $script:statusArgs | Should -Contain '--show-updates'
+        $script:statusArgs | Should -Contain '--xml'
+        $script:logArgs | Should -Contain '--revision'
+        $script:logArgs | Should -Contain 'HEAD:1'
+        ($warningMessages -join "`n") | Should -Match 'Working copy .* is out of date'
+        ($warningMessages -join "`n") | Should -Match 'The working copy was not updated'
+        ($out -join "`n") | Should -Match 'r101'
     }
 
     It 'includes changed paths by default in plain-text output' {
