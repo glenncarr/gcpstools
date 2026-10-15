@@ -359,16 +359,16 @@ Search-AppEventLog -SearchString '*error*' -MaxEvents 500
 
 `Search-SvnLog` searches SVN commit history for a pattern in commit messages,
 with optional file filtering. Patterns are regex (case-insensitive) by
-default; use `-SimpleMatch` for a literal search. Results are plain text by
-default, with changed paths included. Use `-HidePaths` to omit paths or
-`-UseColor` for colored output. Logs are fetched through repository `HEAD`
+default; use `-SimpleMatch` for a literal search. Results use a compact colored
+layout with changed paths included; use `-HidePaths` to omit paths. Use
+`-Clipboard` to copy the plain-text rendering. Logs are fetched through repository `HEAD`
 without updating the working copy; an informational message appears if it is
 behind the repository. The `ssl` alias is imported with the module:
 
 ```powershell
 Search-SvnLog -Pattern 'bug fix' -IncludeFile 'SettingsService\.cs' -Limit 100
-Search-SvnLog -Pattern 'bug fix' -UseColor
 Search-SvnLog -Pattern 'bug fix' -HidePaths
+Search-SvnLog -Pattern 'bug fix' -Clipboard
 ssl -Pattern 'bug fix'
 ```
 

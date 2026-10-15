@@ -46,17 +46,26 @@ Describe 'Search-SvnLog' {
         }
     }
 
-    It 'returns plain-text output by default containing the revision and message' {
-        $out = Search-SvnLog -Path 'C:\repo' -Pattern 'fix'
-        ($out -join "`n") | Should -Match 'r101'
-        ($out -join "`n") | Should -Match 'fix null reference in parser'
+    It 'always renders colored host output with the revision and message' {
+        $out = Search-SvnLog -Path 'C:\repo' -Pattern 'fix' 6>&1
+        $joined = $out | Out-String
+        $joined | Should -Match 'r\s+101'
+        $joined | Should -Match 'fix null reference in parser'
+
+        $revisionRecord = @($out | Where-Object {
+            $_.MessageData -is [System.Management.Automation.HostInformationMessage] -and
+            $_.MessageData.Message -eq '101'
+        })
+        $revisionRecord.Count | Should -Be 1
+        $revisionRecord[0].MessageData.ForegroundColor | Should -Be White
+        $revisionRecord[0].MessageData.BackgroundColor | Should -Be DarkBlue
     }
 
     It 'queries repository HEAD and reports when the working copy is out of date' {
         $script:statusXml = $script:staleStatusXml
         $warningMessages = @()
 
-        $out = Search-SvnLog -Path 'C:\repo' -Pattern 'fix' -WarningVariable warningMessages
+        $out = Search-SvnLog -Path 'C:\repo' -Pattern 'fix' -WarningVariable warningMessages 6>&1
 
         $script:statusArgs | Should -Contain '--show-updates'
         $script:statusArgs | Should -Contain '--xml'
@@ -64,82 +73,74 @@ Describe 'Search-SvnLog' {
         $script:logArgs | Should -Contain 'HEAD:1'
         ($warningMessages -join "`n") | Should -Match 'Working copy .* is out of date'
         ($warningMessages -join "`n") | Should -Match 'The working copy was not updated'
-        ($out -join "`n") | Should -Match 'r101'
+        ($out | Out-String) | Should -Match 'r\s+101'
     }
 
-    It 'includes changed paths by default in plain-text output' {
-        $out = Search-SvnLog -Path 'C:\repo' -Pattern 'fix'
-        $joined = $out -join "`n"
+    It 'uses one separator line between commits' {
+        $out = Search-SvnLog -Path 'C:\repo' 6>&1
+        $separators = @($out | Where-Object {
+            $_.MessageData -is [System.Management.Automation.HostInformationMessage] -and
+            $_.MessageData.Message -eq ('-' * 60)
+        })
+
+        $separators.Count | Should -Be 1
+    }
+
+    It 'does not expose PlainText or UseColor switches' {
+        $parameters = (Get-Command Search-SvnLog).Parameters
+        $parameters.ContainsKey('PlainText') | Should -BeFalse
+        $parameters.ContainsKey('UseColor') | Should -BeFalse
+    }
+
+    It 'includes changed paths in the default colored output' {
+        $out = Search-SvnLog -Path 'C:\repo' -Pattern 'fix' 6>&1
+        $joined = $out | Out-String
         $joined | Should -Match 'Message:'
         $joined | Should -Match 'Paths:'
         $joined | Should -Match '/trunk/src/App\.cs'
     }
 
-    It 'produces no ANSI escape sequences in plain-text output' {
-        $out = Search-SvnLog -Path 'C:\repo' -Pattern 'fix'
-        ($out -join "`n") | Should -Not -Match ([char]27)
-    }
-
-    It 'uses colored host output when -UseColor is specified' {
-        if ($PSVersionTable.PSVersion.Major -ge 7) {
-            Mock Get-Module { [pscustomobject]@{ Name = 'PwshSpectreConsole' } } -ParameterFilter { $ListAvailable -and $Name -eq 'PwshSpectreConsole' }
-            Mock Import-Module {}
-            Mock Get-Command { $null } -ParameterFilter { $Name -eq 'Format-SpectrePanel' }
-        }
-
-        $out = Search-SvnLog -Path 'C:\repo' -Pattern 'fix' -UseColor 6>&1
-        ($out | Out-String) | Should -Match 'Fetching SVN log for:'
-        ($out | Out-String) | Should -Match 'Total matches: 1'
-        ($out | Out-String) | Should -Match '/trunk/src/App\.cs'
-    }
-
-    It 'hides changed paths from colored output when -HidePaths is specified' {
-        if ($PSVersionTable.PSVersion.Major -ge 7) {
-            Mock Get-Module { [pscustomobject]@{ Name = 'PwshSpectreConsole' } } -ParameterFilter { $ListAvailable -and $Name -eq 'PwshSpectreConsole' }
-            Mock Import-Module {}
-            Mock Get-Command { $null } -ParameterFilter { $Name -eq 'Format-SpectrePanel' }
-        }
-
-        $out = Search-SvnLog -Path 'C:\repo' -Pattern 'fix' -UseColor -HidePaths 6>&1
+    It 'hides changed paths when -HidePaths is specified' {
+        $out = Search-SvnLog -Path 'C:\repo' -Pattern 'fix' -HidePaths 6>&1
         ($out | Out-String) | Should -Not -Match '/trunk/src/App\.cs'
     }
 
     It 'filters commits by pattern' {
-        $out = Search-SvnLog -Path 'C:\repo' -Pattern 'new feature'
-        ($out -join "`n") | Should -Match 'r102'
-        ($out -join "`n") | Should -Not -Match 'r101'
+        $out = Search-SvnLog -Path 'C:\repo' -Pattern 'new feature' 6>&1
+        ($out | Out-String) | Should -Match 'r\s+102'
+        ($out | Out-String) | Should -Not -Match 'r\s+101'
     }
 
     It 'includes changed paths after the message by default and with -ShowPaths' {
-        $defaultOutput = Search-SvnLog -Path 'C:\repo' -Pattern 'fix'
-        $joined = $defaultOutput -join "`n"
+        $defaultOutput = Search-SvnLog -Path 'C:\repo' -Pattern 'fix' 6>&1
+        $joined = $defaultOutput | Out-String
         $joined | Should -Match 'Message:'
         $joined | Should -Match 'Paths:'
         $joined | Should -Match '/trunk/src/App\.cs'
         $joined.IndexOf('Message:') | Should -BeLessThan $joined.IndexOf('Paths:')
 
-        $explicitPaths = Search-SvnLog -Path 'C:\repo' -Pattern 'fix' -ShowPaths
-        ($explicitPaths -join "`n") | Should -Match '/trunk/src/App\.cs'
+        $explicitPaths = Search-SvnLog -Path 'C:\repo' -Pattern 'fix' -ShowPaths 6>&1
+        ($explicitPaths | Out-String) | Should -Match '/trunk/src/App\.cs'
     }
 
     It 'suppresses changed paths and labels with -HidePaths' {
-        $withoutPaths = Search-SvnLog -Path 'C:\repo' -Pattern 'fix' -HidePaths
-        ($withoutPaths -join "`n") | Should -Not -Match 'Paths:'
-        ($withoutPaths -join "`n") | Should -Not -Match 'Message:'
-        ($withoutPaths -join "`n") | Should -Not -Match '/trunk/src/App\.cs'
+        $withoutPaths = Search-SvnLog -Path 'C:\repo' -Pattern 'fix' -HidePaths 6>&1
+        ($withoutPaths | Out-String) | Should -Not -Match 'Paths:'
+        ($withoutPaths | Out-String) | Should -Not -Match 'Message:'
+        ($withoutPaths | Out-String) | Should -Not -Match '/trunk/src/App\.cs'
     }
 
     It 'returns no matching revisions for a non-matching pattern' {
-        $out = Search-SvnLog -Path 'C:\repo' -Pattern 'ZZZ_NO_MATCH'
-        ($out -join "`n") | Should -Not -Match 'r10'
-        $out | Should -Contain 'No commits found matching the specified criteria.'
+        $out = Search-SvnLog -Path 'C:\repo' -Pattern 'ZZZ_NO_MATCH' 6>&1
+        ($out | Out-String) | Should -Not -Match 'r10'
+        ($out | Out-String) | Should -Match 'No commits found matching the specified criteria.'
     }
 
     It 'returns a plain-text message when the log is empty' {
         $script:sampleXml = '<log />'
 
-        $out = Search-SvnLog -Path 'C:\repo' -Pattern 'fix'
+        $out = Search-SvnLog -Path 'C:\repo' -Pattern 'fix' 6>&1
 
-        $out | Should -Contain 'No log entries found.'
+        ($out | Out-String) | Should -Match 'No log entries found.'
     }
 }

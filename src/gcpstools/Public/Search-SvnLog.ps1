@@ -47,13 +47,9 @@
 .PARAMETER HidePaths
     Omits changed paths and their labels from the output. Takes precedence over -ShowPaths.
 
-.PARAMETER UseColor
-    When specified, displays results using colored host output or Spectre panels
-    instead of emitting plain-text output to the pipeline.
-
 .PARAMETER Clipboard
     Copies the plain-text rendering of the results to the clipboard while still
-    showing the normal colored output on screen. Combine with any display mode.
+    displaying the colored results on screen.
 
 .EXAMPLE
     Search-SvnLog.ps1 -Pattern "fix null reference"
@@ -71,10 +67,7 @@
     Search-SvnLog.ps1 -Pattern "bug 1234","bug 5678" -SimpleMatch
 
 .EXAMPLE
-    Search-SvnLog.ps1 -Pattern "deploy" | Set-Clipboard
-
-.EXAMPLE
-    Search-SvnLog.ps1 -Pattern "deploy" -UseColor
+    Search-SvnLog.ps1 -Pattern "deploy" -Clipboard
 #>
 [CmdletBinding()]
 param(
@@ -115,9 +108,6 @@ param(
     [int] $Last,
 
     [Parameter()]
-    [switch] $UseColor,
-
-    [Parameter()]
     [switch] $Clipboard,
 
     [Parameter()]
@@ -131,35 +121,14 @@ $showPaths = $ShowPaths -and -not $HidePaths
 
 # --- Color palette for patterns ------------------------------------------------
 $colorPalette = @(
-    @{ Fg = 'White';  Bg = 'DarkBlue';    Spectre = 'blue'    }
-    @{ Fg = 'White';  Bg = 'DarkGreen';   Spectre = 'green'   }
-    @{ Fg = 'White';  Bg = 'DarkMagenta'; Spectre = 'purple'  }
-    @{ Fg = 'Black';  Bg = 'DarkYellow';  Spectre = 'yellow'  }
-    @{ Fg = 'White';  Bg = 'DarkRed';     Spectre = 'red'     }
-    @{ Fg = 'White';  Bg = 'DarkCyan';    Spectre = 'teal'    }
-    @{ Fg = 'Black';  Bg = 'Gray';        Spectre = 'grey'    }
+    @{ Fg = 'White';  Bg = 'DarkBlue'    }
+    @{ Fg = 'White';  Bg = 'DarkGreen'   }
+    @{ Fg = 'White';  Bg = 'DarkMagenta' }
+    @{ Fg = 'Black';  Bg = 'DarkYellow'  }
+    @{ Fg = 'White';  Bg = 'DarkRed'     }
+    @{ Fg = 'White';  Bg = 'DarkCyan'    }
+    @{ Fg = 'Black';  Bg = 'Gray'        }
 )
-
-# --- Check for PwshSpectreConsole module (PowerShell 7+ only) -------------------
-$hasSpectre = $false
-if ($UseColor -and $PSVersionTable.PSVersion.Major -ge 7) {
-    $hasSpectre = $null -ne (Get-Module -ListAvailable -Name PwshSpectreConsole)
-    if (-not $hasSpectre) {
-        Write-Host "PwshSpectreConsole module not found. Install it for enhanced output?" -ForegroundColor Yellow
-        Write-Host "  [Y] Yes  [N] No (continue without it)" -ForegroundColor DarkGray -NoNewline
-        $keyInfo = [System.Console]::ReadKey($true)
-        Write-Host ''
-        if ($keyInfo.Key -eq [System.ConsoleKey]::Y) {
-            Write-Host "Installing PwshSpectreConsole..." -ForegroundColor Cyan
-            Install-Module PwshSpectreConsole -Scope CurrentUser -Force -AllowClobber
-            $hasSpectre = $true
-        }
-    }
-    if ($hasSpectre) {
-        Import-Module PwshSpectreConsole -ErrorAction SilentlyContinue
-        $hasSpectre = $null -ne (Get-Command Format-SpectrePanel -ErrorAction SilentlyContinue)
-    }
-}
 
 # --- Build regex list for each pattern -----------------------------------------
 $regexOptions = if ($CaseSensitive) {
@@ -201,29 +170,6 @@ if ($Limit -gt 0) {
     $svnArgs += '--limit', $Limit
 }
 
-if ($UseColor) {
-    Write-Host "Fetching SVN log for: $Path" -ForegroundColor Cyan
-    if ($Limit -gt 0) {
-        Write-Host "  (limited to last $Limit entries)" -ForegroundColor DarkGray
-    } else {
-        Write-Host "  (no limit — retrieving all entries)" -ForegroundColor DarkGray
-    }
-    Write-Host ''
-    if ($Pattern) {
-        Write-Host "Patterns:" -ForegroundColor Cyan
-        for ($i = 0; $i -lt $Pattern.Count; $i++) {
-            $c = $colorPalette[$i % $colorPalette.Count]
-            Write-Host "  [$($i + 1)] " -NoNewline -ForegroundColor Cyan
-            Write-Host $Pattern[$i] -NoNewline -ForegroundColor $c.Fg -BackgroundColor $c.Bg
-            Write-Host ''
-        }
-    }
-    if ($IncludeFile) {
-        Write-Host "File filter: $IncludeFile" -ForegroundColor Cyan
-    }
-    Write-Host ''
-}
-
 # --- Retrieve and parse log ----------------------------------------------------
 $rawXml = svn @svnArgs 2>&1
 
@@ -237,11 +183,7 @@ if ($LASTEXITCODE -ne 0) {
 
 $entries = @($logXml.SelectNodes('/log/logentry'))
 if (-not $entries) {
-    if ($UseColor) {
-        Write-Host "No log entries found." -ForegroundColor Yellow
-    } else {
-        Write-Output "No log entries found."
-    }
+    Write-Host "No log entries found." -ForegroundColor Yellow
     return
 }
 
@@ -291,17 +233,8 @@ foreach ($entry in $entries) {
 }
 
 if ($results.Count -eq 0) {
-    if ($UseColor) {
-        Write-Host "No commits found matching the specified criteria." -ForegroundColor Yellow
-    } else {
-        Write-Output "No commits found matching the specified criteria."
-    }
+    Write-Host "No commits found matching the specified criteria." -ForegroundColor Yellow
     return
-}
-
-if ($UseColor) {
-    Write-Host "Found $($results.Count) matching commit(s)" -ForegroundColor Green
-    Write-Host ''
 }
 
 # --- Sort results (default: oldest first) --------------------------------------
@@ -328,7 +261,7 @@ if ($Last) {
 # --- Display results -----------------------------------------------------------
 $displayCount = 0
 
-# Build the plain-text lines for a single log entry (shared by default output and -Clipboard).
+# Build the plain-text lines for clipboard output.
 function Format-PlainSvnEntry {
     param($Entry, [int]$PatternIndex)
 
@@ -362,162 +295,84 @@ function Format-PlainSvnEntry {
     }
 }
 
-foreach ($result in $results) {
-    $entry = $result.Entry
-    $color = $colorPalette[$result.PatternIndex % $colorPalette.Count]
+function Write-ColorSvnEntry {
+    param($Entry, [int]$PatternIndex)
 
-    # --- Plain-text output (copy-friendly, no colors) --------------------------
-    if (-not $UseColor) {
-        if ($displayCount -gt 0) {
-            Write-Output ('-' * 60)
-        }
-        Format-PlainSvnEntry $entry $result.PatternIndex
-        $displayCount++
-        continue
-    }
+    $color = $colorPalette[$PatternIndex % $colorPalette.Count]
+    $author = if ($Entry.author) { $Entry.author } else { '(none)' }
 
-    # Core fields — single line: Revision, Author, Pattern, Date
-    Write-Host ''
-    Write-Host "r" -NoNewline -ForegroundColor Yellow
-    Write-Host $entry.revision -NoNewline -ForegroundColor $color.Fg -BackgroundColor $color.Bg
-    Write-Host " | " -NoNewline -ForegroundColor DarkGray
-    Write-Host $(if ($entry.author) { $entry.author } else { '(none)' }) -NoNewline
+    Write-Host 'r' -NoNewline -ForegroundColor Yellow
+    Write-Host $Entry.revision -NoNewline -ForegroundColor $color.Fg -BackgroundColor $color.Bg
+    Write-Host " | $author" -NoNewline
     if ($Pattern -and $Pattern.Count -gt 1) {
-        Write-Host " | " -NoNewline -ForegroundColor DarkGray
-        Write-Host "[$($result.PatternIndex + 1)] $($Pattern[$result.PatternIndex])" -NoNewline -ForegroundColor $color.Fg -BackgroundColor $color.Bg
+        Write-Host ' | ' -NoNewline
+        Write-Host "[$($PatternIndex + 1)] $($Pattern[$PatternIndex])" -NoNewline -ForegroundColor $color.Fg -BackgroundColor $color.Bg
     }
-    $rawDate = $entry.date
-    if ($rawDate) {
-        $parsedDate = [datetime]::Parse($rawDate, $null, [System.Globalization.DateTimeStyles]::RoundtripKind)
-        $localDate  = $parsedDate.ToLocalTime()
-        $timeSpan   = [datetime]::Now - $localDate
-        $ago = if ($timeSpan.TotalDays -ge 365) {
-            $years = [math]::Floor($timeSpan.TotalDays / 365)
-            "$years year$(if ($years -ne 1) {'s'}) ago"
-        } elseif ($timeSpan.TotalDays -ge 30) {
-            $months = [math]::Floor($timeSpan.TotalDays / 30)
-            "$months month$(if ($months -ne 1) {'s'}) ago"
-        } elseif ($timeSpan.TotalDays -ge 7) {
-            $weeks = [math]::Floor($timeSpan.TotalDays / 7)
-            "$weeks week$(if ($weeks -ne 1) {'s'}) ago"
-        } elseif ($timeSpan.TotalDays -ge 1) {
-            $days = [math]::Floor($timeSpan.TotalDays)
-            "$days day$(if ($days -ne 1) {'s'}) ago"
-        } elseif ($timeSpan.TotalHours -ge 1) {
-            $hours = [math]::Floor($timeSpan.TotalHours)
-            "$hours hour$(if ($hours -ne 1) {'s'}) ago"
-        } else {
-            $mins = [math]::Floor($timeSpan.TotalMinutes)
-            "$mins minute$(if ($mins -ne 1) {'s'}) ago"
-        }
-        Write-Host " | " -NoNewline -ForegroundColor DarkGray
-        Write-Host $localDate -NoNewline
-        Write-Host " ($ago)" -NoNewline -ForegroundColor DarkGray
+    if ($Entry.date) {
+        $date = [datetime]::Parse($Entry.date, $null, [System.Globalization.DateTimeStyles]::RoundtripKind).ToLocalTime()
+        Write-Host " | $date" -NoNewline
     }
     Write-Host ''
 
-    # Commit message — colored by matching pattern only if -Pattern was specified
-    $msg = ($(if ($entry.msg) { $entry.msg } else { '' }) -replace '\r', '').TrimEnd()
-    if ($hasSpectre) {
-        $spectreColor = $color.Spectre
-        $escapedMsg = $msg | Get-SpectreEscapedText
-        $prevRendering = $PSStyle.OutputRendering
-        $PSStyle.OutputRendering = 'Ansi'
-        $panel = ($escapedMsg | Format-SpectrePanel -Header "Message" -Color $spectreColor -Expand | Out-String).Trim()
-        $PSStyle.OutputRendering = $prevRendering
-        [System.Console]::WriteLine($panel)
-    } else {
-        Write-Host "Message  :" -ForegroundColor Yellow
-        $lines = $msg -split '\n'
-        foreach ($line in $lines) {
-            if ($Pattern) {
-                Write-Host "  $line" -NoNewline -ForegroundColor $color.Fg -BackgroundColor $color.Bg
-                Write-Host ''
-            } else {
-                Write-Host "  $line"
-            }
+    $message = ($(if ($Entry.msg) { $Entry.msg } else { '' }) -replace '\r', '').TrimEnd()
+    if ($showPaths) { Write-Host 'Message:' -ForegroundColor Yellow }
+    foreach ($line in ($message -split '\n')) {
+        if ($Pattern) {
+            Write-Host "  $line" -ForegroundColor $color.Fg -BackgroundColor $color.Bg
+        } else {
+            Write-Host "  $line"
         }
     }
 
-    # Changed paths
     if ($showPaths) {
-    $paths = if ($entry.paths) { $entry.paths.path } else { $null }
-    if ($paths) {
-        if ($hasSpectre) {
-            $pathLines = foreach ($p in $paths) {
-                $action    = $p.action
-                $cfPath    = $p.GetAttribute('copyfrom-path')
-                $cfRev     = $p.GetAttribute('copyfrom-rev')
-                $copyFrom  = if ($cfPath) { "  [[copied from $(Get-SpectreEscapedText $cfPath)@$cfRev]]" } else { '' }
-                $nk        = $p.GetAttribute('node-kind')
-                $nodeKind  = if ($nk) { " ($nk)" } else { '' }
-                $pathText  = Get-SpectreEscapedText $p.'#text'
-                $spectrePathColor = switch ($action) {
-                    'A' { 'green'   }
-                    'D' { 'red'     }
-                    'M' { 'cyan1'   }
-                    'R' { 'purple'  }
-                    default { 'white' }
+        $paths = if ($Entry.paths) { $Entry.paths.path } else { $null }
+        if ($paths) {
+            Write-Host 'Paths:' -ForegroundColor Yellow
+            foreach ($path in $paths) {
+                $action = $path.action
+                $copyFromPath = $path.GetAttribute('copyfrom-path')
+                $copyFromRevision = $path.GetAttribute('copyfrom-rev')
+                $copyFrom = if ($copyFromPath) { "  [copied from $copyFromPath@$copyFromRevision]" } else { '' }
+                $nodeKindValue = $path.GetAttribute('node-kind')
+                $nodeKind = if ($nodeKindValue) { " ($nodeKindValue)" } else { '' }
+                $pathText = $path.'#text'
+                $prefix = "  [$action]$nodeKind "
+                $pathColor = switch ($action) {
+                    'A' { 'Green'   }
+                    'D' { 'Red'     }
+                    'M' { 'Cyan'    }
+                    'R' { 'Magenta' }
+                    default { 'White' }
                 }
-                "[$spectrePathColor]$(Get-SpectreEscapedText "[$action]")$nodeKind $pathText$copyFrom[/]"
-            }
-            $pathContent = $pathLines -join "`n"
-            $prevRendering = $PSStyle.OutputRendering
-            $PSStyle.OutputRendering = 'Ansi'
-            $panel = ($pathContent | Format-SpectrePanel -Header "Paths" -Color $color.Spectre -Expand | Out-String).Trim()
-            $PSStyle.OutputRendering = $prevRendering
-            [System.Console]::WriteLine($panel)
-        } else {
-            Write-Host "Paths    :" -ForegroundColor Yellow
-            foreach ($p in $paths) {
-                $action    = $p.action
-                $cfPath    = $p.GetAttribute('copyfrom-path')
-                $cfRev     = $p.GetAttribute('copyfrom-rev')
-                $copyFrom  = if ($cfPath) { "  [copied from $cfPath@$cfRev]" } else { '' }
-                $nk        = $p.GetAttribute('node-kind')
-                $nodeKind  = if ($nk) { " ($nk)" } else { '' }
-                $pathText  = $p.'#text'
-                $prefix    = "           [$action]$nodeKind "
 
                 if ($fileRegex -and $fileRegex.IsMatch($pathText)) {
-                    # Highlight the matching portion of the path
-                    $m = $fileRegex.Match($pathText)
-                    $before = $pathText.Substring(0, $m.Index)
-                    $match  = $m.Value
-                    $after  = $pathText.Substring($m.Index + $m.Length)
-                    Write-Host $prefix -NoNewline -ForegroundColor Cyan
-                    Write-Host $before -NoNewline -ForegroundColor Cyan
-                    Write-Host $match -NoNewline -ForegroundColor $color.Fg -BackgroundColor $color.Bg
-                    Write-Host "$after$copyFrom" -ForegroundColor Cyan
+                    $match = $fileRegex.Match($pathText)
+                    $before = $pathText.Substring(0, $match.Index)
+                    $after = $pathText.Substring($match.Index + $match.Length)
+                    Write-Host "$prefix$before" -NoNewline -ForegroundColor $pathColor
+                    Write-Host $match.Value -NoNewline -ForegroundColor $color.Fg -BackgroundColor $color.Bg
+                    Write-Host "$after$copyFrom" -ForegroundColor $pathColor
                 } else {
-                    $pathColor = switch ($action) {
-                        'A' { 'Green'   }
-                        'D' { 'Red'     }
-                        'M' { 'Cyan'    }
-                        'R' { 'Magenta' }
-                        default { 'White' }
-                    }
                     Write-Host "$prefix$pathText$copyFrom" -ForegroundColor $pathColor
                 }
             }
         }
     }
-    }
+}
 
+foreach ($result in $results) {
+    if ($displayCount -gt 0) {
+        Write-Host ('-' * 60) -ForegroundColor DarkGray
+    }
+    Write-ColorSvnEntry $result.Entry $result.PatternIndex
     $displayCount++
 
-    # Pause after PageSize commits
     if ($PageSize -gt 0 -and $displayCount -lt $results.Count -and ($displayCount % $PageSize) -eq 0) {
         Write-Host "-- $displayCount of $($results.Count) -- Press any key for more, Q to quit --" -ForegroundColor DarkGray -NoNewline
         $keyInfo = [System.Console]::ReadKey($true)
         Write-Host ''
         if ($keyInfo.Key -eq [System.ConsoleKey]::Q) { break }
     }
-}
-
-if ($UseColor) {
-    Write-Host "Total matches: $($results.Count)" -ForegroundColor Green
-    Write-Host ''
 }
 
 if ($Clipboard) {
