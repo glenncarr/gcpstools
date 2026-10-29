@@ -409,9 +409,10 @@ Test-Xml -XmlPath .\document.xml -XsdUrl 'http://myserver/schema.xsd' -TargetNam
 `ConvertTo-NativePath` converts `\` and `/` separators to the current operating
 system's separator and returns the full path via `[System.IO.Path]::GetFullPath`.
 Relative paths resolve against the current PowerShell location; the path need
-not exist:
+not exist. The `cnp` alias is imported with the module:
 
 ```powershell
 ConvertTo-NativePath '/dev/trunk/Source/Components/Servers/CanadaPost/Component/Databases/CanadaPostCarrierTnTDataManager.cs'
+cnp 'src/gcpstools/Public'
 ```
 

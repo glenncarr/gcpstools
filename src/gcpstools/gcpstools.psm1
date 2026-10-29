@@ -14,7 +14,8 @@ foreach ($file in @($Private + $Public)) {
 
 # Export public functions and the Search-SvnLog alias
 Set-Alias -Name ssl -Value Search-SvnLog
-Export-ModuleMember -Function $Public.BaseName -Alias ssl
+Set-Alias -Name cnp -Value ConvertTo-NativePath
+Export-ModuleMember -Function $Public.BaseName -Alias ssl, cnp
 
 # Register the regex history search key handler on module load
 if (Get-Module -ListAvailable -Name PSReadLine) {
