@@ -28,6 +28,8 @@ Describe 'Search-SvnLog' {
 '@
         $script:upToDateStatusXml = '<status><target path="C:\repo" /></status>'
         $script:staleStatusXml = '<status><target path="C:\repo"><entry path="C:\repo\App.cs"><wc-status item="normal" props="none" revision="1" /><repos-status item="modified" props="none" /></entry></target></status>'
+        $sep = [string][System.IO.Path]::DirectorySeparatorChar
+        $script:appPathPattern = [regex]::Escape("${sep}trunk${sep}src${sep}App.cs")
     }
 
     BeforeEach {
@@ -97,12 +99,12 @@ Describe 'Search-SvnLog' {
         $joined = $out | Out-String
         $joined | Should -Match 'Message:'
         $joined | Should -Match 'Paths:'
-        $joined | Should -Match '/trunk/src/App\.cs'
+        $joined | Should -Match $script:appPathPattern
     }
 
     It 'hides changed paths when -HidePaths is specified' {
         $out = Search-SvnLog -Path 'C:\repo' -Pattern 'fix' -HidePaths 6>&1
-        ($out | Out-String) | Should -Not -Match '/trunk/src/App\.cs'
+        ($out | Out-String) | Should -Not -Match $script:appPathPattern
     }
 
     It 'filters commits by pattern' {
@@ -116,18 +118,24 @@ Describe 'Search-SvnLog' {
         $joined = $defaultOutput | Out-String
         $joined | Should -Match 'Message:'
         $joined | Should -Match 'Paths:'
-        $joined | Should -Match '/trunk/src/App\.cs'
+        $joined | Should -Match $script:appPathPattern
         $joined.IndexOf('Message:') | Should -BeLessThan $joined.IndexOf('Paths:')
 
         $explicitPaths = Search-SvnLog -Path 'C:\repo' -Pattern 'fix' -ShowPaths 6>&1
-        ($explicitPaths | Out-String) | Should -Match '/trunk/src/App\.cs'
+        ($explicitPaths | Out-String) | Should -Match $script:appPathPattern
+    }
+
+    It 'highlights -IncludeFile matches in paths shown with OS separators' {
+        $out = Search-SvnLog -Path 'C:\repo' -IncludeFile 'src/App' 6>&1
+        # Highlighting splits the path across -NoNewline host records.
+        ($out -join '') | Should -Match $script:appPathPattern
     }
 
     It 'suppresses changed paths and labels with -HidePaths' {
         $withoutPaths = Search-SvnLog -Path 'C:\repo' -Pattern 'fix' -HidePaths 6>&1
         ($withoutPaths | Out-String) | Should -Not -Match 'Paths:'
         ($withoutPaths | Out-String) | Should -Not -Match 'Message:'
-        ($withoutPaths | Out-String) | Should -Not -Match '/trunk/src/App\.cs'
+        ($withoutPaths | Out-String) | Should -Not -Match $script:appPathPattern
     }
 
     It 'returns no matching revisions for a non-matching pattern' {

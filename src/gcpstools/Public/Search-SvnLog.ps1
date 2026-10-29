@@ -260,6 +260,7 @@ if ($Last) {
 
 # --- Display results -----------------------------------------------------------
 $displayCount = 0
+$pathSeparator = [string][System.IO.Path]::DirectorySeparatorChar
 
 # Build the plain-text lines for clipboard output.
 function Format-PlainSvnEntry {
@@ -284,12 +285,12 @@ function Format-PlainSvnEntry {
         if ($paths) {
             'Paths:'
             foreach ($p in $paths) {
-                $cfPath   = $p.GetAttribute('copyfrom-path')
+                $cfPath   = $p.GetAttribute('copyfrom-path').Replace('/', $pathSeparator)
                 $cfRev    = $p.GetAttribute('copyfrom-rev')
                 $copyFrom = if ($cfPath) { "  [copied from $cfPath@$cfRev]" } else { '' }
                 $nk       = $p.GetAttribute('node-kind')
                 $nodeKind = if ($nk) { " ($nk)" } else { '' }
-                "  [$($p.action)]$nodeKind $($p.'#text')$copyFrom"
+                "  [$($p.action)]$nodeKind $($p.'#text'.Replace('/', $pathSeparator))$copyFrom"
             }
         }
     }
@@ -330,7 +331,7 @@ function Write-ColorSvnEntry {
             Write-Host 'Paths:' -ForegroundColor Yellow
             foreach ($path in $paths) {
                 $action = $path.action
-                $copyFromPath = $path.GetAttribute('copyfrom-path')
+                $copyFromPath = $path.GetAttribute('copyfrom-path').Replace('/', $pathSeparator)
                 $copyFromRevision = $path.GetAttribute('copyfrom-rev')
                 $copyFrom = if ($copyFromPath) { "  [copied from $copyFromPath@$copyFromRevision]" } else { '' }
                 $nodeKindValue = $path.GetAttribute('node-kind')
@@ -345,15 +346,18 @@ function Write-ColorSvnEntry {
                     default { 'White' }
                 }
 
+                # Match against the svn path; the 1-for-1 separator swap keeps match indexes valid.
+                $displayPath = $pathText.Replace('/', $pathSeparator)
                 if ($fileRegex -and $fileRegex.IsMatch($pathText)) {
                     $match = $fileRegex.Match($pathText)
-                    $before = $pathText.Substring(0, $match.Index)
-                    $after = $pathText.Substring($match.Index + $match.Length)
+                    $before = $displayPath.Substring(0, $match.Index)
+                    $matchText = $displayPath.Substring($match.Index, $match.Length)
+                    $after = $displayPath.Substring($match.Index + $match.Length)
                     Write-Host "$prefix$before" -NoNewline -ForegroundColor $pathColor
-                    Write-Host $match.Value -NoNewline -ForegroundColor $color.Fg -BackgroundColor $color.Bg
+                    Write-Host $matchText -NoNewline -ForegroundColor $color.Fg -BackgroundColor $color.Bg
                     Write-Host "$after$copyFrom" -ForegroundColor $pathColor
                 } else {
-                    Write-Host "$prefix$pathText$copyFrom" -ForegroundColor $pathColor
+                    Write-Host "$prefix$displayPath$copyFrom" -ForegroundColor $pathColor
                 }
             }
         }

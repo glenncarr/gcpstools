@@ -12,7 +12,7 @@
 RootModule = 'gcpstools.psm1'
 
 # Version number of this module.
-ModuleVersion = '0.3.1'
+ModuleVersion = '0.3.2'
 
 # Supported PSEditions
 CompatiblePSEditions = @('Desktop', 'Core')
@@ -73,6 +73,7 @@ FunctionsToExport = @(
     'Add-SvnUnversioned'
     'Compare-DirectoryContentParallel'
     'Compare-WsdlDirectory'
+    'ConvertTo-NativePath'
     'Find-AssemblyRevision'
     'Find-FancyQuote'
     'Find-InvalidUtf8'

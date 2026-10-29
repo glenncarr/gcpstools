@@ -403,3 +403,14 @@ errors with their severity and line number:
 Test-Xml -XmlPath .\document.xml -XsdUrl 'http://myserver/schema.xsd' -TargetNamespace 'urn:myorg:myschema'
 ```
 
+## ConvertTo-NativePath
+
+`ConvertTo-NativePath` converts `\` and `/` separators to the current operating
+system's separator and returns the full path via `[System.IO.Path]::GetFullPath`.
+Relative paths resolve against the current PowerShell location; the path need
+not exist:
+
+```powershell
+ConvertTo-NativePath '/dev/trunk/Source/Components/Servers/CanadaPost/Component/Databases/CanadaPostCarrierTnTDataManager.cs'
+```
+

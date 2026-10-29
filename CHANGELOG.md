@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-10-29
+
+### Added
+- `ConvertTo-NativePath`: normalizes `\` and `/` separators to the current
+  operating system's separator and returns the full path.
+
+### Changed
+- `Search-SvnLog`: changed paths display with the operating system's directory
+  separator. `-IncludeFile` still matches against the SVN `/` paths.
+
 ## [0.3.1] - 2026-10-15
 
 ### Changed
