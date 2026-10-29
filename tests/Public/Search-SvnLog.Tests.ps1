@@ -34,6 +34,7 @@ Describe 'Search-SvnLog' {
 
     BeforeEach {
         $script:statusXml = $script:upToDateStatusXml
+        $script:infoXml = '<info />'
         $script:statusArgs = @()
         $script:logArgs = @()
         Mock svn {
@@ -41,6 +42,8 @@ Describe 'Search-SvnLog' {
             if ($args[0] -eq 'status') {
                 $script:statusArgs = @($args)
                 $script:statusXml
+            } elseif ($args[0] -eq 'info') {
+                $script:infoXml
             } else {
                 $script:logArgs = @($args)
                 $script:sampleXml
@@ -129,6 +132,24 @@ Describe 'Search-SvnLog' {
         $out = Search-SvnLog -Path 'C:\repo' -IncludeFile 'src/App' 6>&1
         # Highlighting splits the path across -NoNewline host records.
         ($out -join '') | Should -Match $script:appPathPattern
+    }
+
+    It 'shows changed paths under the working copy as local paths' {
+        $script:infoXml = '<info><entry kind="dir"><relative-url>^/trunk</relative-url></entry></info>'
+        $root = (Resolve-Path $TestDrive).ProviderPath
+        $expected = [regex]::Escape([System.IO.Path]::Combine($root, 'src', 'App.cs'))
+
+        $out = Search-SvnLog -Path $root -Pattern 'fix' 6>&1
+        ($out | Out-String) | Should -Match $expected
+
+        $highlighted = Search-SvnLog -Path $root -IncludeFile 'src/App' 6>&1
+        ($highlighted -join '') | Should -Match $expected
+    }
+
+    It 'keeps repository paths outside the working copy' {
+        $script:infoXml = '<info><entry kind="dir"><relative-url>^/branches/b1</relative-url></entry></info>'
+        $out = Search-SvnLog -Path (Resolve-Path $TestDrive).ProviderPath -Pattern 'fix' 6>&1
+        ($out | Out-String) | Should -Match $script:appPathPattern
     }
 
     It 'suppresses changed paths and labels with -HidePaths' {

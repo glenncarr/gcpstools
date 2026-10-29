@@ -262,6 +262,46 @@ if ($Last) {
 $displayCount = 0
 $pathSeparator = [string][System.IO.Path]::DirectorySeparatorChar
 
+# Repository path of -Path (e.g. '/trunk') and its local root, used to show changed paths locally.
+$workingCopyUrlPath = $null
+$workingCopyRoot = $null
+if ($showPaths) {
+    try {
+        $infoOutput = svn info --xml $Path 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            [xml]$infoXml = $infoOutput | Out-String
+            $relativeUrl = $infoXml.SelectSingleNode('/info/entry/relative-url')
+            if ($relativeUrl) {
+                $workingCopyUrlPath = [uri]::UnescapeDataString($relativeUrl.InnerText.TrimStart('^')).TrimEnd('/')
+                $workingCopyRoot = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path).TrimEnd('\', '/')
+            }
+        }
+    } catch {
+        Write-Verbose "svn info failed for '$Path'; showing repository paths: $($_.Exception.Message)"
+    }
+}
+
+# Returns the display text and the svn/display prefix lengths that differ.
+function Get-SvnDisplayPath {
+    param([string]$SvnPath)
+
+    if ($null -ne $workingCopyUrlPath) {
+        if ($SvnPath -eq $workingCopyUrlPath) {
+            return [pscustomobject]@{ Text = $workingCopyRoot; SvnPrefixLength = $SvnPath.Length; DisplayPrefixLength = $workingCopyRoot.Length }
+        }
+        $svnPrefix = "$workingCopyUrlPath/"
+        if ($SvnPath.StartsWith($svnPrefix, [System.StringComparison]::Ordinal)) {
+            $displayPrefix = "$workingCopyRoot$pathSeparator"
+            return [pscustomobject]@{
+                Text                = $displayPrefix + $SvnPath.Substring($svnPrefix.Length).Replace('/', $pathSeparator)
+                SvnPrefixLength     = $svnPrefix.Length
+                DisplayPrefixLength = $displayPrefix.Length
+            }
+        }
+    }
+    [pscustomobject]@{ Text = $SvnPath.Replace('/', $pathSeparator); SvnPrefixLength = 0; DisplayPrefixLength = 0 }
+}
+
 # Build the plain-text lines for clipboard output.
 function Format-PlainSvnEntry {
     param($Entry, [int]$PatternIndex)
@@ -285,12 +325,12 @@ function Format-PlainSvnEntry {
         if ($paths) {
             'Paths:'
             foreach ($p in $paths) {
-                $cfPath   = $p.GetAttribute('copyfrom-path').Replace('/', $pathSeparator)
+                $cfPath   = $p.GetAttribute('copyfrom-path')
                 $cfRev    = $p.GetAttribute('copyfrom-rev')
-                $copyFrom = if ($cfPath) { "  [copied from $cfPath@$cfRev]" } else { '' }
+                $copyFrom = if ($cfPath) { "  [copied from $((Get-SvnDisplayPath $cfPath).Text)@$cfRev]" } else { '' }
                 $nk       = $p.GetAttribute('node-kind')
                 $nodeKind = if ($nk) { " ($nk)" } else { '' }
-                "  [$($p.action)]$nodeKind $($p.'#text'.Replace('/', $pathSeparator))$copyFrom"
+                "  [$($p.action)]$nodeKind $((Get-SvnDisplayPath $p.'#text').Text)$copyFrom"
             }
         }
     }
@@ -331,7 +371,8 @@ function Write-ColorSvnEntry {
             Write-Host 'Paths:' -ForegroundColor Yellow
             foreach ($path in $paths) {
                 $action = $path.action
-                $copyFromPath = $path.GetAttribute('copyfrom-path').Replace('/', $pathSeparator)
+                $copyFromPath = $path.GetAttribute('copyfrom-path')
+                if ($copyFromPath) { $copyFromPath = (Get-SvnDisplayPath $copyFromPath).Text }
                 $copyFromRevision = $path.GetAttribute('copyfrom-rev')
                 $copyFrom = if ($copyFromPath) { "  [copied from $copyFromPath@$copyFromRevision]" } else { '' }
                 $nodeKindValue = $path.GetAttribute('node-kind')
@@ -346,16 +387,21 @@ function Write-ColorSvnEntry {
                     default { 'White' }
                 }
 
-                # Match against the svn path; the 1-for-1 separator swap keeps match indexes valid.
-                $displayPath = $pathText.Replace('/', $pathSeparator)
-                if ($fileRegex -and $fileRegex.IsMatch($pathText)) {
-                    $match = $fileRegex.Match($pathText)
-                    $before = $displayPath.Substring(0, $match.Index)
-                    $matchText = $displayPath.Substring($match.Index, $match.Length)
-                    $after = $displayPath.Substring($match.Index + $match.Length)
-                    Write-Host "$prefix$before" -NoNewline -ForegroundColor $pathColor
-                    Write-Host $matchText -NoNewline -ForegroundColor $color.Fg -BackgroundColor $color.Bg
-                    Write-Host "$after$copyFrom" -ForegroundColor $pathColor
+                # Match against the svn path; text after the mapped prefix keeps the same length.
+                $display = Get-SvnDisplayPath $pathText
+                $displayPath = $display.Text
+                $match = if ($fileRegex) { $fileRegex.Match($pathText) } else { $null }
+                $offset = $display.DisplayPrefixLength - $display.SvnPrefixLength
+                $start = 0
+                $end = 0
+                if ($match -and $match.Success) {
+                    $start = [Math]::Max($match.Index, $display.SvnPrefixLength) + $offset
+                    $end = [Math]::Max($match.Index + $match.Length, $display.SvnPrefixLength) + $offset
+                }
+                if ($end -gt $start) {
+                    Write-Host "$prefix$($displayPath.Substring(0, $start))" -NoNewline -ForegroundColor $pathColor
+                    Write-Host $displayPath.Substring($start, $end - $start) -NoNewline -ForegroundColor $color.Fg -BackgroundColor $color.Bg
+                    Write-Host "$($displayPath.Substring($end))$copyFrom" -ForegroundColor $pathColor
                 } else {
                     Write-Host "$prefix$displayPath$copyFrom" -ForegroundColor $pathColor
                 }

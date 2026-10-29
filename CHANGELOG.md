@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-10-29
+
+### Changed
+- `Search-SvnLog`: changed paths under the `-Path` working copy display as local
+  paths combined with that working-copy path. Other paths keep their repository
+  form.
+
 ## [0.3.2] - 2026-10-29
 
 ### Added

@@ -360,7 +360,8 @@ Search-AppEventLog -SearchString '*error*' -MaxEvents 500
 `Search-SvnLog` searches SVN commit history for a pattern in commit messages,
 with optional file filtering. Patterns are regex (case-insensitive) by
 default; use `-SimpleMatch` for a literal search. Results use a compact colored
-layout with changed paths included; use `-HidePaths` to omit paths. Use
+layout with changed paths included; use `-HidePaths` to omit paths. Changed
+paths under the `-Path` working copy are shown as local paths. Use
 `-Clipboard` to copy the plain-text rendering. Logs are fetched through repository `HEAD`
 without updating the working copy; an informational message appears if it is
 behind the repository. The `ssl` alias is imported with the module:
