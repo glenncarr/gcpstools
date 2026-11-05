@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.3.5] - 2026-11-05
+
 ### Added
 - `Get-NuGetPackageContent`: lists local NuGet package entries and reads selected
   files as text or raw bytes using .NET ZIP APIs, without extraction.
