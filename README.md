@@ -416,3 +416,28 @@ ConvertTo-NativePath '/dev/trunk/Source/Components/Servers/CanadaPost/Component/
 cnp 'src/gcpstools/Public'
 ```
 
+## Get-NuGetPackageContent
+
+`Get-NuGetPackageContent` lists entries in a local `.nupkg` or reads an internal
+file using .NET ZIP APIs, without extraction or external tools:
+
+```powershell
+Get-NuGetPackageContent -Path .\Example.1.0.0.nupkg |
+    Select-Object FullName, Length, CompressedLength
+
+Get-NuGetPackageContent -Path .\Example.1.0.0.nupkg -EntryPath 'Example.nuspec'
+
+$bytes = Get-NuGetPackageContent .\Example.1.0.0.nupkg `
+    -EntryPath 'lib/netstandard2.0/Example.dll' -AsByteStream
+```
+
+Listing objects include `PackagePath`, `FullName`, `Name`, `Length`,
+`CompressedLength`, `LastWriteTime`, and `IsDirectory`. Pipe package paths or
+`Get-ChildItem -Filter *.nupkg` results into the command to inspect several packages.
+Package paths are literal; internal paths are exact, case-sensitive ZIP paths
+using `/`, not wildcard patterns. Directory entries can be listed but not read.
+Text is returned as one string with line endings preserved, using UTF-8 by
+default and detecting byte-order marks. Invalid UTF-8 is reported as an error;
+`-AsByteStream` returns one byte array for binary content, including empty files.
+Missing packages or entries, invalid archives, and read failures produce errors;
+use `-ErrorAction Stop` to make them terminating.

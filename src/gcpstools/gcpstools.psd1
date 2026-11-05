@@ -79,6 +79,7 @@ FunctionsToExport = @(
     'Find-InvalidUtf8'
     'Format-DirectoryDiff'
     'Get-InternalsVisibleToAttribute'
+    'Get-NuGetPackageContent'
     'Get-RecentSvnFiles'
     'Get-ServerUpdateStatus'
     'Get-SlackChannelHistory'
@@ -154,4 +155,3 @@ PrivateData = @{
 # DefaultCommandPrefix = ''
 
 }
-
