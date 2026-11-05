@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.3.6] - 2026-11-05
+
+### Changed
+- Replaced the Progistics-specific `ConvertTo-NativePath` example with a generic path.
+
 ## [0.3.5] - 2026-11-05
 
 ### Added

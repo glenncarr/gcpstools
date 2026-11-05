@@ -22,6 +22,8 @@
   then a fenced `powershell` example).
 - When adding a public function, appending a new section; when changing a function's
   parameters or behavior, update its existing section to match.
+- Do not use Progistics-related paths (including any path under `\dev\trunk`) in public
+  function help or README examples; use generic example paths instead.
 - Do not edit `src/gcpstools/README.md` directly; it is generated from the root `README.md`
   during publishing.
 

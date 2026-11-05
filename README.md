@@ -412,7 +412,7 @@ Relative paths resolve against the current PowerShell location; the path need
 not exist. The `cnp` alias is imported with the module:
 
 ```powershell
-ConvertTo-NativePath '/dev/trunk/Source/Components/Servers/CanadaPost/Component/Databases/CanadaPostCarrierTnTDataManager.cs'
+ConvertTo-NativePath '/src/project/Example.cs'
 cnp 'src/gcpstools/Public'
 ```
 

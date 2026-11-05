@@ -12,7 +12,7 @@ function ConvertTo-NativePath {
     One or more paths to normalize.
 
 .EXAMPLE
-    ConvertTo-NativePath '/dev/trunk/Source/Components/Servers/CanadaPost/Component/Databases/CanadaPostCarrierTnTDataManager.cs'
+    ConvertTo-NativePath '/src/project/Example.cs'
 
 .EXAMPLE
     'src\gcpstools/Public\..\gcpstools.psd1' | ConvertTo-NativePath
