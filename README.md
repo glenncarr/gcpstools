@@ -441,3 +441,51 @@ default and detecting byte-order marks. Invalid UTF-8 is reported as an error;
 `-AsByteStream` returns one byte array for binary content, including empty files.
 Missing packages or entries, invalid archives, and read failures produce errors;
 use `-ErrorAction Stop` to make them terminating.
+
+## Watch-ServerUpgrade
+
+`Watch-ServerUpgrade` monitors a Windows in-place upgrade across reboots until
+the reported OS build meets an optional supplied minimum, without assuming a
+Windows release. Omit `-ExpectedBuild` to report OS details after recovery
+without verifying upgrade success.
+
+```powershell
+Watch-ServerUpgrade -ComputerName 'APP01' -Verbose
+Watch-ServerUpgrade -ComputerName 'APP01' -ExpectedBuild 26100 -Verbose
+Watch-ServerUpgrade -ComputerName 'SQL01' -ExpectedBuild 26100 `
+   -Credential (Get-Credential) -PollIntervalSeconds 15 -TimeoutSeconds 7200 -Beep
+```
+
+Example minimum build numbers for `-ExpectedBuild`:
+
+| Windows Release | Build |
+| --- | --- |
+| Windows Server 2016 | 14393 |
+| Windows Server 2019 | 17763 |
+| Windows Server 2022 | 20348 |
+| Windows Server 2025 | 26100 |
+| Windows 11 22H2 | 22621 |
+| Windows 11 23H2 | 22631 |
+| Windows 11 24H2 | 26100 |
+
+These are base OS build numbers, not cumulative-update revisions. A supplied
+target accepts the listed build or any higher build.
+
+Start before the first reboot or while the target is offline. All three ports,
+SMB (445), WinRM (5985), and RDP (3389), must disconnect before build verification begins; any port
+recovering triggers CIM queries. CIM access is required. Intermediate reboots,
+older builds (when a target is supplied), and CIM startup failures are retried until the overall timeout
+(3600 seconds by default). In-flight network operations can extend the timeout
+by their connection timeout. `-Verbose` shows timestamped feedback on every
+waiting poll, including the waiting phase, SMB/WinRM/RDP port states, elapsed time,
+and next-check delay. `-Beep` enables an optional audible alert.
+
+The returned summary includes `ComputerName`, `ExpectedBuild`, `BuildNumber`,
+`OSCaption`, `Status`, `ElapsedSeconds`, and `LastQueryError`. Status is
+`Succeeded` (target build reached), `Recovered` (OS details retrieved without
+a target build), `TimedOut` (no disconnect/recovery observed), `QueryFailed`
+(ports recovered but no build was retrieved), or `TargetBuildNotReached`
+(last reported build was below the target at timeout). A lower build may mean
+setup is still running or a rollback occurred; it is not proof of rollback.
+Without a target build, `ExpectedBuild` is null and monitoring ends at the first
+successful OS query after recovery, which may occur between setup reboots.
