@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.3.7] - 2026-11-10
+
+### Added
+- `Watch-ServerUpgrade`: monitors Windows upgrades across reboots, optionally
+  verifies a minimum OS build, and reports recovery or timeout status with
+  recurring verbose feedback and optional audible alerts.
+
+### Changed
+- `Get-NuGetPackageContent`: defaults to a table showing `FullName`,
+  `LastWriteTime`, `Length`, and `CompressedLength`, while retaining all metadata
+  properties for pipeline use. Updated the README and command help accordingly.
+- Ignore the generated Pester test report `testResults.xml`.
+
 ## [0.3.6] - 2026-11-05
 
 ### Changed

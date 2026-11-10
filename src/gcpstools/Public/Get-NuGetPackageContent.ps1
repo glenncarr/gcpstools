@@ -6,7 +6,8 @@ function Get-NuGetPackageContent {
 .DESCRIPTION
     Opens a local .nupkg as a ZIP archive using .NET, without extracting files
     or requiring external tools. By default, returns metadata objects that
-    remain usable after the archive is closed.
+    remain usable after the archive is closed. The default table displays
+    FullName, LastWriteTime, Length, and CompressedLength.
 
     With EntryPath, returns the complete file as one string, preserving line
     endings. Text defaults to UTF-8 with BOM detection; invalid UTF-8 produces
@@ -77,7 +78,7 @@ function Get-NuGetPackageContent {
                 $archive = [System.IO.Compression.ZipFile]::OpenRead($file.FullName)
                 if ($PSCmdlet.ParameterSetName -eq 'List') {
                     foreach ($entry in $archive.Entries) {
-                        [pscustomobject]@{
+                        $metadata = [pscustomobject]@{
                             PackagePath      = $file.FullName
                             FullName         = $entry.FullName
                             Name             = $entry.Name
@@ -86,6 +87,11 @@ function Get-NuGetPackageContent {
                             LastWriteTime    = $entry.LastWriteTime
                             IsDirectory      = $entry.FullName.EndsWith('/')
                         }
+                        $displayProperties = [System.Management.Automation.PSPropertySet]::new(
+                            'DefaultDisplayPropertySet',
+                            [string[]]@('FullName', 'LastWriteTime', 'Length', 'CompressedLength'))
+                        $metadata | Add-Member -MemberType MemberSet -Name PSStandardMembers -Value $displayProperties
+                        $metadata
                     }
                 }
                 else {

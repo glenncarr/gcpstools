@@ -72,6 +72,18 @@ Describe 'Get-NuGetPackageContent' {
         $file | Should -Not -BeOfType ([System.IO.Compression.ZipArchiveEntry])
     }
 
+    It 'Displays the requested default table columns while retaining all metadata' {
+        $entries = @(Get-NuGetPackageContent -Path $packagePath)
+        $properties = @($entries[0].PSStandardMembers.DefaultDisplayPropertySet.ReferencedPropertyNames)
+        ($properties -join ',') | Should -BeExactly 'FullName,LastWriteTime,Length,CompressedLength'
+        $entries[0].PackagePath | Should -Be $packagePath
+        $entries[0].Name | Should -Be 'Example.nuspec'
+        $entries[0].IsDirectory | Should -BeFalse
+        $display = $entries | Out-String -Width 240
+        $display | Should -Match 'FullName\s+LastWriteTime\s+Length\s+CompressedLength'
+        $display | Should -Not -Match 'PackagePath|IsDirectory'
+    }
+
     It 'Returns complete text with original line endings and releases the archive' {
         $result = Get-NuGetPackageContent $packagePath -EntryPath 'Example.nuspec'
         $result | Should -BeOfType ([string])

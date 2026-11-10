@@ -12,7 +12,7 @@
 RootModule = 'gcpstools.psm1'
 
 # Version number of this module.
-ModuleVersion = '0.3.6'
+ModuleVersion = '0.3.7'
 
 # Supported PSEditions
 CompatiblePSEditions = @('Desktop', 'Core')
@@ -134,7 +134,7 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        ReleaseNotes = 'Publish via GitHub Actions release workflow.'
+        ReleaseNotes = 'Adds Watch-ServerUpgrade for monitoring Windows upgrades across reboots. Get-NuGetPackageContent now displays FullName, LastWriteTime, Length, and CompressedLength by default while retaining all metadata. Updates documentation and ignores generated Pester test results.'
 
         # Prerelease string of this module
         # Prerelease = ''

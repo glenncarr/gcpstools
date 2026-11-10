@@ -422,8 +422,7 @@ cnp 'src/gcpstools/Public'
 file using .NET ZIP APIs, without extraction or external tools:
 
 ```powershell
-Get-NuGetPackageContent -Path .\Example.1.0.0.nupkg |
-    Select-Object FullName, Length, CompressedLength
+Get-NuGetPackageContent -Path .\Example.1.0.0.nupkg
 
 Get-NuGetPackageContent -Path .\Example.1.0.0.nupkg -EntryPath 'Example.nuspec'
 
@@ -432,7 +431,9 @@ $bytes = Get-NuGetPackageContent .\Example.1.0.0.nupkg `
 ```
 
 Listing objects include `PackagePath`, `FullName`, `Name`, `Length`,
-`CompressedLength`, `LastWriteTime`, and `IsDirectory`. Pipe package paths or
+`CompressedLength`, `LastWriteTime`, and `IsDirectory`. The default table shows
+`FullName`, `LastWriteTime`, `Length`, and `CompressedLength`, in that order;
+all properties remain available for pipeline use. Pipe package paths or
 `Get-ChildItem -Filter *.nupkg` results into the command to inspect several packages.
 Package paths are literal; internal paths are exact, case-sensitive ZIP paths
 using `/`, not wildcard patterns. Directory entries can be listed but not read.
