@@ -12,6 +12,7 @@ function Update-DotNetRuntime {
 
         End-of-life channels are skipped unless -IncludeEol is specified. Use
         -CleanupStale to remove superseded patches after a band is current.
+        Results display as a table by default, while remaining objects for pipeline use.
 
     .PARAMETER Band
         Limits processing to the specified major.minor bands, such as '8.0'.
@@ -76,6 +77,7 @@ function Update-DotNetRuntime {
         )
 
         [PSCustomObject][ordered]@{
+            PSTypeName     = 'gcpstools.DotNetRuntimeUpdateResult'
             Framework      = $Framework
             Architecture   = $Architecture
             Band           = $Band

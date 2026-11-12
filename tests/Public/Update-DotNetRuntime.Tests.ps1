@@ -1,5 +1,6 @@
 Describe 'Update-DotNetRuntime' {
     BeforeAll {
+        Import-Module "$PSScriptRoot\..\..\src\gcpstools\gcpstools.psd1" -Force
         . "$PSScriptRoot\..\..\src\gcpstools\Public\Update-DotNetRuntime.ps1"
         . "$PSScriptRoot\..\..\src\gcpstools\Public\Remove-StaleDotNetRuntime.ps1"
     }
@@ -65,6 +66,17 @@ Describe 'Update-DotNetRuntime' {
         $result.CurrentVersion | Should -Be '8.0.1'
         $result.TargetVersion | Should -Be '8.0.2'
         Should -Invoke Invoke-WebRequest -Times 0 -Exactly
+    }
+
+    It 'displays results as a table by default without replacing the objects' {
+        $result = Update-DotNetRuntime -WhatIf
+
+        $result.PSObject.TypeNames | Should -Contain 'gcpstools.DotNetRuntimeUpdateResult'
+        $result.CurrentVersion | Should -Be '8.0.1'
+        $result.PSObject.Properties.Count | Should -Not -BeNullOrEmpty
+        $display = $result | Out-String -Width 240
+        $display | Should -Match 'Framework\s+Architecture\s+Band\s+CurrentVersion\s+TargetVersion\s+Status\s+ExitCode\s+RebootRequired\s+Error'
+        $display | Should -Not -Match 'Framework\s+:'
     }
 
     It 'skips an end-of-life channel unless IncludeEol is specified' {

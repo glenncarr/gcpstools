@@ -279,6 +279,11 @@ Update-DotNetRuntime -Band '8.0', '10.0' -CleanupStale -KeepVersions 2 -Confirm:
 `-CleanupStale` hands the cleanup to `Remove-StaleDotNetRuntime`, so it uses the
 .NET Uninstall Tool unless `-KeepVersions` is greater than 1.
 
+Results display as a table by default with `Framework`, `Architecture`, `Band`,
+`CurrentVersion`, `TargetVersion`, `Status`, `ExitCode`, `RebootRequired`, and
+`Error`. Results remain objects for filtering and other pipeline operations;
+use `Format-List *` to display them as a list instead.
+
 Preview the changes first with `-WhatIf`. To run the update against several
 servers through PowerShell remoting, make sure this module is installed on every
 target and use `Invoke-ServerCommand`:
