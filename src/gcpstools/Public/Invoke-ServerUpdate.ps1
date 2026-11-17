@@ -17,7 +17,8 @@ function Invoke-ServerUpdate {
     By default the command returns as soon as the installation has been started
     on every computer. Use -Wait to wait for the installation to finish and
     return what was installed, and -AllowReboot to let a computer restart
-    itself when the installation requires it.
+    itself when the installation requires it or a restart is already pending,
+    even if no updates are found or the update search fails.
 
     Installing updates is a state-changing operation, so the command supports
     -WhatIf and prompts for confirmation unless -Confirm:$false is used.
@@ -27,8 +28,9 @@ function Invoke-ServerUpdate {
     objects with a Name or ComputerName property.
 
 .PARAMETER AllowReboot
-    Lets the computer restart itself after the installation when a reboot is
-    required. Without this switch the computer is left running and
+    Lets the computer restart itself after checking for and installing updates
+    when a reboot is required, including a restart that was already pending.
+    Without this switch the computer is left running and
     RebootRequired reports whether a restart is still pending.
 
 .PARAMETER Wait
@@ -50,7 +52,7 @@ function Invoke-ServerUpdate {
         TimedOut         Whether -Wait gave up before the install finished.
         UpdatesFound     Updates found, or null when -Wait was not used.
         UpdatesInstalled Updates installed, or null when -Wait was not used.
-        RebootRequired   Whether a restart is needed to finish the install.
+        RebootRequired   Whether a restart was pending or the install needs one.
         Updates          Titles of the updates that were installed.
         Error            Error reported by the installation, if any.
 
@@ -72,10 +74,11 @@ function Invoke-ServerUpdate {
 
 .EXAMPLE
     Get-ServerUpdateStatus -ComputerName 'APP01', 'SQL01' -AsObject |
-        Where-Object AvailableUpdateCount -gt 0 |
-        Invoke-ServerUpdate -Wait
+        Where-Object { $_.AvailableUpdateCount -gt 0 -or $_.RebootPending } |
+        Invoke-ServerUpdate -Wait -AllowReboot
 
-    Updates only the servers that report available updates.
+    Checks servers with available updates or a pending restart, installs any
+    updates, and restarts them if required.
 
 .LINK
     Get-ServerUpdateStatus
@@ -115,6 +118,16 @@ $result = [ordered]@{
 }
 
 try {
+    $result.RebootRequired = [bool](New-Object -ComObject 'Microsoft.Update.SystemInfo').RebootRequired
+} catch {
+    $result.RebootRequired = $false
+}
+
+$result.RebootRequired = $result.RebootRequired -or
+    (Test-Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending') -or
+    (Test-Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired')
+
+try {
     $session = New-Object -ComObject 'Microsoft.Update.Session'
     $found = $session.CreateUpdateSearcher().Search('IsInstalled=0 and IsHidden=0')
     $result.Searched = $found.Updates.Count
@@ -150,7 +163,7 @@ try {
 
             $result.Installed = $ready.Count
             $result.ResultCode = $installed.ResultCode
-            $result.RebootRequired = $installed.RebootRequired
+            $result.RebootRequired = $result.RebootRequired -or $installed.RebootRequired
         }
     }
 } catch {
@@ -219,7 +232,12 @@ process {
     foreach ($server in $ComputerName) {
         $serverNumber++
 
-        if (-not $PSCmdlet.ShouldProcess($server, 'Install available Windows updates')) {
+        $action = 'Install available Windows updates'
+        if ($AllowReboot) {
+            $action += ' and restart if required (including an already pending restart)'
+        }
+
+        if (-not $PSCmdlet.ShouldProcess($server, $action)) {
             continue
         }
 

@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.3.8] - 2026-11-17
+
+### Added
+- `Get-AssemblyInfo`: reads .NET assembly identity, file version, and file-system
+  metadata without loading the assembly into the PowerShell process.
+- `Get-NuGetPackageContent`: extracts all or selected package files with
+  `-DestinationPath`, supports `-Force` and `-WhatIf`, and rejects entries that
+  would escape the destination directory.
+
+### Fixed
+- `Invoke-ServerUpdate`: detects already pending restarts and honors
+  `-AllowReboot` even when no updates are found or the update search fails.
+  Without `-AllowReboot`, reports the pending restart without rebooting.
+
 ## [0.3.7] - 2026-11-10
 
 ### Added

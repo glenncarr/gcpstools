@@ -114,4 +114,106 @@ Describe 'Invoke-ServerUpdate' {
 
         $result.ComputerName | Should -Be @('APP01', 'SQL01')
     }
+
+    Context 'Scheduled task restart handling' {
+        BeforeEach {
+            $script:pendingRestart = $true
+            $script:systemInfoFails = $false
+            $script:searchFails = $false
+            $script:taskResultJson = $null
+
+            Mock -CommandName Restart-Computer -MockWith { }
+            Mock -CommandName Test-Path -MockWith { $false }
+            Mock -CommandName Set-Content -MockWith {
+                param($Value)
+                $script:taskResultJson = $Value
+            }
+            Mock -CommandName New-Object -MockWith {
+                param($ComObject)
+
+                if ($ComObject -eq 'Microsoft.Update.SystemInfo') {
+                    if ($script:systemInfoFails) { throw 'SystemInfo unavailable' }
+                    return [PSCustomObject]@{ RebootRequired = $script:pendingRestart }
+                }
+
+                if ($ComObject -eq 'Microsoft.Update.Session') {
+                    $searcher = [PSCustomObject]@{}
+                    $searcher | Add-Member -MemberType ScriptMethod -Name Search -Value {
+                        param($Criteria)
+                        if ($script:searchFails) { throw 'Restart required before searching' }
+                        [PSCustomObject]@{ Updates = @() }
+                    }
+                    $session = [PSCustomObject]@{ Searcher = $searcher }
+                    $session | Add-Member -MemberType ScriptMethod -Name CreateUpdateSearcher -Value {
+                        $this.Searcher
+                    }
+                    return $session
+                }
+
+                throw "Unexpected COM object: $ComObject"
+            }
+            Mock -CommandName Invoke-Command -MockWith {
+                param($ArgumentList)
+
+                $taskScript = [scriptblock]::Create($ArgumentList[0])
+                & $taskScript -ResultPath 'TestDrive:\update-result.json' -AllowReboot:([bool]$ArgumentList[1])
+                [PSCustomObject]@{
+                    TimedOut = $false
+                    Result = $script:taskResultJson | ConvertFrom-Json
+                }
+            }
+        }
+
+        It 'Checks for updates and reboots for an existing restart with no updates' {
+            $result = Invoke-ServerUpdate -ComputerName 'APP01' -Wait -AllowReboot -Confirm:$false
+
+            $result.UpdatesFound | Should -Be 0
+            $result.UpdatesInstalled | Should -Be 0
+            $result.RebootRequired | Should -BeTrue
+            $result.Error | Should -BeNullOrEmpty
+            Should -Invoke New-Object -ParameterFilter { $ComObject -eq 'Microsoft.Update.Session' } -Times 1 -Exactly
+            Should -Invoke Restart-Computer -ParameterFilter { $Force } -Times 1 -Exactly
+        }
+
+        It 'Reports an existing restart without rebooting unless allowed' {
+            $result = Invoke-ServerUpdate -ComputerName 'APP01' -Wait -Confirm:$false
+
+            $result.RebootRequired | Should -BeTrue
+            Should -Invoke Restart-Computer -Times 0 -Exactly
+        }
+
+        It 'Does not reboot when no restart is required' {
+            $script:pendingRestart = $false
+
+            $result = Invoke-ServerUpdate -ComputerName 'APP01' -Wait -AllowReboot -Confirm:$false
+
+            $result.Error | Should -BeNullOrEmpty
+            $result.RebootRequired | Should -BeFalse
+            Should -Invoke Restart-Computer -Times 0 -Exactly
+        }
+
+        It 'Uses the registry restart marker <Marker> when SystemInfo is unavailable' -TestCases @(
+            @{ Marker = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending' }
+            @{ Marker = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired' }
+        ) {
+            param($Marker)
+            $script:systemInfoFails = $true
+            Mock -CommandName Test-Path -MockWith { $true } -ParameterFilter { $Path -eq $Marker }
+
+            $result = Invoke-ServerUpdate -ComputerName 'APP01' -Wait -AllowReboot -Confirm:$false
+
+            $result.RebootRequired | Should -BeTrue
+            Should -Invoke Restart-Computer -Times 1 -Exactly
+        }
+
+        It 'Records a search failure and still reboots when a restart was already pending' {
+            $script:searchFails = $true
+
+            $result = Invoke-ServerUpdate -ComputerName 'APP01' -Wait -AllowReboot -Confirm:$false
+
+            $result.RebootRequired | Should -BeTrue
+            $result.Error | Should -Match 'Restart required before searching'
+            Should -Invoke Restart-Computer -Times 1 -Exactly
+        }
+    }
 }

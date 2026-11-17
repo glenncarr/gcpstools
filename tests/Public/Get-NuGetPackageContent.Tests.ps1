@@ -1,6 +1,7 @@
 Describe 'Get-NuGetPackageContent' {
     BeforeAll {
         . "$PSScriptRoot\..\..\src\gcpstools\Public\Get-NuGetPackageContent.ps1"
+        Add-Type -AssemblyName System.IO.Compression
         Add-Type -AssemblyName System.IO.Compression.FileSystem
 
         function New-TestNuGetPackage {
@@ -106,6 +107,76 @@ Describe 'Get-NuGetPackageContent' {
         Should -ActualValue $output[0] -BeOfType ([byte[]])
         [Convert]::ToBase64String($output[0]) | Should -Be 'AAGA/w=='
         Assert-PackageReleased $packagePath
+    }
+
+    It 'Extracts all package files under the destination directory' {
+        $destination = Join-Path $TestDrive 'all-files'
+        $extracted = @(Get-NuGetPackageContent $packagePath -DestinationPath $destination)
+
+        $extracted.Count | Should -Be 6
+        [System.IO.File]::ReadAllText((Join-Path $destination 'Example.nuspec')) |
+            Should -BeExactly "<package>`r`n</package>`n"
+        [Convert]::ToBase64String([System.IO.File]::ReadAllBytes(
+            (Join-Path $destination 'lib/netstandard2.0/Example.dll'))) | Should -Be 'AAGA/w=='
+        [System.IO.File]::ReadAllText((Join-Path $destination 'docs/readme.txt')) |
+            Should -BeExactly "caf$([char]0xE9)"
+        Assert-PackageReleased $packagePath
+    }
+
+    It 'Extracts only the requested package files' {
+        $destination = Join-Path $TestDrive 'selected-files'
+        $extracted = @(Get-NuGetPackageContent $packagePath `
+            -EntryPath 'Example.nuspec', 'docs/readme.txt' -DestinationPath $destination)
+
+        $extracted.Count | Should -Be 2
+        Test-Path -LiteralPath (Join-Path $destination 'Example.nuspec') | Should -BeTrue
+        Test-Path -LiteralPath (Join-Path $destination 'docs/readme.txt') | Should -BeTrue
+        Test-Path -LiteralPath (Join-Path $destination 'lib/netstandard2.0/Example.dll') | Should -BeFalse
+    }
+
+    It 'Does not overwrite existing files unless Force is specified' {
+        $destination = Join-Path $TestDrive 'overwrite'
+        $target = Join-Path $destination 'Example.nuspec'
+        New-Item -ItemType Directory -Path $destination | Out-Null
+        [System.IO.File]::WriteAllText($target, 'existing')
+
+        { Get-NuGetPackageContent $packagePath -EntryPath 'Example.nuspec' `
+            -DestinationPath $destination -ErrorAction Stop } | Should -Throw '*already exists*'
+        [System.IO.File]::ReadAllText($target) | Should -BeExactly 'existing'
+
+        Get-NuGetPackageContent $packagePath -EntryPath 'Example.nuspec' `
+            -DestinationPath $destination -Force | Out-Null
+        [System.IO.File]::ReadAllText($target) | Should -BeExactly "<package>`r`n</package>`n"
+    }
+
+    It 'Honors WhatIf without creating extracted files' {
+        $destination = Join-Path $TestDrive 'what-if'
+        Get-NuGetPackageContent $packagePath -DestinationPath $destination -WhatIf | Out-Null
+
+        Test-Path -LiteralPath $destination | Should -BeFalse
+    }
+
+    It 'Requires DestinationPath when Force is specified' {
+        { Get-NuGetPackageContent $packagePath -Force -ErrorAction Stop } |
+            Should -Throw '*Force can only be used with DestinationPath*'
+    }
+
+    It 'Rejects package entries that escape the destination directory' {
+        $unsafePackage = Join-Path $TestDrive 'unsafe.nupkg'
+        $archive = [System.IO.Compression.ZipFile]::Open($unsafePackage, [System.IO.Compression.ZipArchiveMode]::Create)
+        try {
+            $entry = $archive.CreateEntry('../outside.txt')
+            $stream = $entry.Open()
+            $stream.Dispose()
+        }
+        finally {
+            $archive.Dispose()
+        }
+
+        $destination = Join-Path $TestDrive 'safe-destination'
+        { Get-NuGetPackageContent $unsafePackage -DestinationPath $destination -ErrorAction Stop } |
+            Should -Throw '*would extract outside destination*'
+        Test-Path -LiteralPath (Join-Path $TestDrive 'outside.txt') | Should -BeFalse
     }
 
     It 'Returns an empty string for an empty text file' {

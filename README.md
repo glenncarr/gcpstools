@@ -88,18 +88,22 @@ Invoke-ServerUpdate -ComputerName 'APP01', 'SQL01'
 The command prompts before touching each server; use `-Confirm:$false` to skip
 the prompt or `-WhatIf` to see what would happen. By default it returns as soon
 as the installation has started. Use `-Wait` to wait for the result, and
-`-AllowReboot` to let a server restart itself when the update requires it:
+`-AllowReboot` to let a server restart itself when an update requires it or a
+restart is already pending. It checks for updates first and can restart even
+when no updates are found or the update search fails. Without `-AllowReboot`,
+it reports the pending restart but does not reboot:
 
 ```powershell
 Invoke-ServerUpdate -ComputerName 'APP01' -Wait -AllowReboot -Confirm:$false
 ```
 
-Both commands compose, so only the servers that need updates are touched:
+Both commands compose, so only servers with updates or a pending restart are
+touched:
 
 ```powershell
 Get-ServerUpdateStatus -ComputerName 'APP01', 'SQL01' -AsObject |
-   Where-Object AvailableUpdateCount -gt 0 |
-   Invoke-ServerUpdate -Wait
+   Where-Object { $_.AvailableUpdateCount -gt 0 -or $_.RebootPending } |
+   Invoke-ServerUpdate -Wait -AllowReboot
 ```
 
 ## Invoke-ServerCommand
@@ -243,6 +247,18 @@ friend assembly name:
 
 ```powershell
 Get-InternalsVisibleToAttribute -Path .\MyLibrary.dll -FriendAssemblyNamePattern '*Tests*'
+```
+
+## Get-AssemblyInfo
+
+`Get-AssemblyInfo` reports a managed assembly's identity, strong-name token,
+architecture, file version details, and file metadata without loading it into
+the current PowerShell process:
+
+```powershell
+Get-AssemblyInfo -Path 'C:\path\to\MyLibrary.dll' | Format-List
+Get-ChildItem .\bin -Filter *.dll | Get-AssemblyInfo |
+   Format-Table Name, Version, FileVersion, ProcessorArchitecture
 ```
 
 ## Get-RecentSvnFiles
@@ -423,8 +439,9 @@ cnp 'src/gcpstools/Public'
 
 ## Get-NuGetPackageContent
 
-`Get-NuGetPackageContent` lists entries in a local `.nupkg` or reads an internal
-file using .NET ZIP APIs, without extraction or external tools:
+`Get-NuGetPackageContent` lists entries in a local `.nupkg`, reads an internal
+file, or extracts all or selected files using .NET ZIP APIs without external
+tools:
 
 ```powershell
 Get-NuGetPackageContent -Path .\Example.1.0.0.nupkg
@@ -433,6 +450,11 @@ Get-NuGetPackageContent -Path .\Example.1.0.0.nupkg -EntryPath 'Example.nuspec'
 
 $bytes = Get-NuGetPackageContent .\Example.1.0.0.nupkg `
     -EntryPath 'lib/netstandard2.0/Example.dll' -AsByteStream
+
+Get-NuGetPackageContent .\Example.1.0.0.nupkg -DestinationPath .\Example
+
+Get-NuGetPackageContent .\Example.1.0.0.nupkg `
+   -EntryPath 'Example.nuspec', 'README.md' -DestinationPath .\selected
 ```
 
 Listing objects include `PackagePath`, `FullName`, `Name`, `Length`,
@@ -445,6 +467,9 @@ using `/`, not wildcard patterns. Directory entries can be listed but not read.
 Text is returned as one string with line endings preserved, using UTF-8 by
 default and detecting byte-order marks. Invalid UTF-8 is reported as an error;
 `-AsByteStream` returns one byte array for binary content, including empty files.
+Extraction creates parent directories as needed, rejects entries that would
+escape the destination, and does not overwrite existing files unless `-Force`
+is specified. Use `-WhatIf` to preview extraction.
 Missing packages or entries, invalid archives, and read failures produce errors;
 use `-ErrorAction Stop` to make them terminating.
 
