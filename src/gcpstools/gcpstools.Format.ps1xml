@@ -2,6 +2,36 @@
 <Configuration>
   <ViewDefinitions>
     <View>
+      <Name>gcpstools.ServerUpdateResult</Name>
+      <ViewSelectedBy>
+        <TypeName>gcpstools.ServerUpdateResult</TypeName>
+      </ViewSelectedBy>
+      <TableControl>
+        <TableHeaders>
+          <TableColumnHeader><Label>ComputerName</Label></TableColumnHeader>
+          <TableColumnHeader><Label>Started</Label></TableColumnHeader>
+          <TableColumnHeader><Label>TimedOut</Label></TableColumnHeader>
+          <TableColumnHeader><Label>UpdatesFound</Label></TableColumnHeader>
+          <TableColumnHeader><Label>UpdatesInstalled</Label></TableColumnHeader>
+          <TableColumnHeader><Label>RebootRequired</Label></TableColumnHeader>
+          <TableColumnHeader><Label>Error</Label></TableColumnHeader>
+        </TableHeaders>
+        <TableRowEntries>
+          <TableRowEntry>
+            <TableColumnItems>
+              <TableColumnItem><PropertyName>ComputerName</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>Started</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>TimedOut</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>UpdatesFound</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>UpdatesInstalled</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>RebootRequired</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>Error</PropertyName></TableColumnItem>
+            </TableColumnItems>
+          </TableRowEntry>
+        </TableRowEntries>
+      </TableControl>
+    </View>
+    <View>
       <Name>gcpstools.DotNetRuntimeUpdateResult</Name>
       <ViewSelectedBy>
         <TypeName>gcpstools.DotNetRuntimeUpdateResult</TypeName>

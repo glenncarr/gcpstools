@@ -26,6 +26,7 @@ Describe 'Invoke-ServerUpdate' {
 
         $result.ComputerName | Should -Be @('APP01', 'SQL01')
         $result.Started | Should -Be @($true, $true)
+        $result[0].PSTypeNames[0] | Should -Be 'gcpstools.ServerUpdateResult'
         Should -Invoke Invoke-Command -Times 2 -Exactly
     }
 
@@ -95,6 +96,7 @@ Describe 'Invoke-ServerUpdate' {
 
         $result.ComputerName | Should -Be @('APP01', 'SQL01')
         $result[0].Started | Should -BeFalse
+        $result[0].PSTypeNames[0] | Should -Be 'gcpstools.ServerUpdateResult'
         $result[0].Error | Should -Be 'WinRM cannot complete the operation'
         $result[1].Started | Should -BeTrue
         ($errors | ForEach-Object ToString) -join "`n" | Should -Match 'APP01'

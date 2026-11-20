@@ -80,6 +80,8 @@ computers are reported as unavailable, and `-Verbose` shows why.
 reports. Because the Windows Update Agent refuses to install updates from a
 remote session, the install runs in a scheduled task as SYSTEM on each target
 and its result is written to `%ProgramData%\gcpstools`.
+Results display as a table by default and remain objects for further pipeline
+processing.
 
 ```powershell
 Invoke-ServerUpdate -ComputerName 'APP01', 'SQL01'

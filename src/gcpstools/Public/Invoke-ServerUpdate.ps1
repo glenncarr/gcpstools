@@ -20,6 +20,9 @@ function Invoke-ServerUpdate {
     itself when the installation requires it or a restart is already pending,
     even if no updates are found or the update search fails.
 
+    Results display as a table by default and remain objects for pipeline
+    processing.
+
     Installing updates is a state-changing operation, so the command supports
     -WhatIf and prompts for confirmation unless -Confirm:$false is used.
 
@@ -249,6 +252,7 @@ process {
             Write-Error "Failed to start the Windows update installation on '$server': $($_.Exception.Message)"
 
             [PSCustomObject]@{
+                PSTypeName       = 'gcpstools.ServerUpdateResult'
                 ComputerName     = $server
                 Started          = $false
                 TimedOut         = $false
@@ -269,6 +273,7 @@ process {
         }
 
         [PSCustomObject]@{
+            PSTypeName       = 'gcpstools.ServerUpdateResult'
             ComputerName     = $server
             Started          = $true
             TimedOut         = [bool]$outcome.TimedOut

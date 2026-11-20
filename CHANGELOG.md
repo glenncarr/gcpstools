@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.3.9] - 2026-11-19
+
+### Changed
+- `Invoke-ServerUpdate`: displays results in a table by default while retaining
+  objects for pipeline processing.
+
 ## [0.3.8] - 2026-11-17
 
 ### Added
